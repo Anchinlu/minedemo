@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b82ec568c35af4478e05b3c3652d3a0, type: 3}
+  m_Name: AtlasData
+  m_EditorClassIdentifier: Assembly-CSharp::MineDemo.Blocks.AtlasData
+  keys: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a000000
+  values:
+  - bottomLeft: {x: 0, y: 0}
+    bottomRight: {x: 0.25, y: 0}
+    topRight: {x: 0.25, y: 0.125}
+    topLeft: {x: 0, y: 0.125}
+  - bottomLeft: {x: 0.28125, y: 0}
+    bottomRight: {x: 0.53125, y: 0}
+    topRight: {x: 0.53125, y: 0.125}
+    topLeft: {x: 0.28125, y: 0.125}
+  - bottomLeft: {x: 0.5625, y: 0}
+    bottomRight: {x: 0.8125, y: 0}
+    topRight: {x: 0.8125, y: 0.125}
+    topLeft: {x: 0.5625, y: 0.125}
+  - bottomLeft: {x: 0, y: 0.140625}
+    bottomRight: {x: 0.25, y: 0.140625}
+    topRight: {x: 0.25, y: 0.265625}
+    topLeft: {x: 0, y: 0.265625}
+  - bottomLeft: {x: 0.28125, y: 0.140625}
+    bottomRight: {x: 0.53125, y: 0.140625}
+    topRight: {x: 0.53125, y: 0.265625}
+    topLeft: {x: 0.28125, y: 0.265625}
+  - bottomLeft: {x: 0.5625, y: 0.140625}
+    bottomRight: {x: 0.8125, y: 0.140625}
+    topRight: {x: 0.8125, y: 0.265625}
+    topLeft: {x: 0.5625, y: 0.265625}
+  - bottomLeft: {x: 0, y: 0.28125}
+    bottomRight: {x: 0.25, y: 0.28125}
+    topRight: {x: 0.25, y: 0.40625}
+    topLeft: {x: 0, y: 0.40625}
+  - bottomLeft: {x: 0.28125, y: 0.28125}
+    bottomRight: {x: 0.53125, y: 0.28125}
+    topRight: {x: 0.53125, y: 0.40625}
+    topLeft: {x: 0.28125, y: 0.40625}
+  - bottomLeft: {x: 0.5625, y: 0.28125}
+    bottomRight: {x: 0.8125, y: 0.28125}
+    topRight: {x: 0.8125, y: 0.40625}
+    topLeft: {x: 0.5625, y: 0.40625}
+  - bottomLeft: {x: 0, y: 0.421875}
+    bottomRight: {x: 0.25, y: 0.421875}
+    topRight: {x: 0.25, y: 0.546875}
+    topLeft: {x: 0, y: 0.546875}
+  - bottomLeft: {x: 0.28125, y: 0.421875}
+    bottomRight: {x: 0.53125, y: 0.421875}
+    topRight: {x: 0.53125, y: 0.546875}
+    topLeft: {x: 0.28125, y: 0.546875}

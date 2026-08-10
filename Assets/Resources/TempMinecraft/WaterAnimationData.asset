@@ -1,0 +1,84 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47864182f4d9eda4d9e6aee335952de1, type: 3}
+  m_Name: WaterAnimationData
+  m_EditorClassIdentifier: Assembly-CSharp::MineDemo.World.WaterAnimationData
+  stillFrames:
+  - {fileID: 2800000, guid: 1e0390610cb624b40874583052168128, type: 3}
+  - {fileID: 2800000, guid: 8cce7d19e0aae50458f6f311f5cf8545, type: 3}
+  - {fileID: 2800000, guid: e54c6ffdd7a10044ba76a88da3e0d060, type: 3}
+  - {fileID: 2800000, guid: e37ac7935ec9c814f8a7d1f44882f9ab, type: 3}
+  - {fileID: 2800000, guid: 6a972ded1622dae43b944b4cbb5c3011, type: 3}
+  - {fileID: 2800000, guid: f7c82e56a9a89984780b8b7fb7d376c2, type: 3}
+  - {fileID: 2800000, guid: ab4443f8f3cf3ad41b307251a409524d, type: 3}
+  - {fileID: 2800000, guid: d5a53aaf774589e40a9b368592f36280, type: 3}
+  - {fileID: 2800000, guid: e76bbff9fca772643a8f09a0c4d155ad, type: 3}
+  - {fileID: 2800000, guid: 3798798f06576e3468db7b744e8c4f4e, type: 3}
+  - {fileID: 2800000, guid: 64c771eea89d96945a6d6b9e8642351b, type: 3}
+  - {fileID: 2800000, guid: 44ce5efbf7ce1c644a5eaba936528d6b, type: 3}
+  - {fileID: 2800000, guid: e94ebf4b612f74642be505f93a73681f, type: 3}
+  - {fileID: 2800000, guid: aa04a8a9da6e55547905259d451adef5, type: 3}
+  - {fileID: 2800000, guid: f54727c7425ff674a8df5300d3d6e9bf, type: 3}
+  - {fileID: 2800000, guid: 0cf6c12bab138064ba5610870011c12a, type: 3}
+  - {fileID: 2800000, guid: 2f6df32c688544a4faf06e8102653dfe, type: 3}
+  - {fileID: 2800000, guid: adc243f8fbd5f6647b4943e957ce6e82, type: 3}
+  - {fileID: 2800000, guid: 93b80dbf08bf7ab46920741d5f177b59, type: 3}
+  - {fileID: 2800000, guid: 5db33cdcf3c431141a3f067754b58296, type: 3}
+  - {fileID: 2800000, guid: 32f07a7d9b9ca554191f2c5dd9c72c1c, type: 3}
+  - {fileID: 2800000, guid: 47762ee140b6d7040b8116b332e8a0bc, type: 3}
+  - {fileID: 2800000, guid: 8a662078d8c2fff4b892306d68525314, type: 3}
+  - {fileID: 2800000, guid: 34cdd1d25ead4f54aa70108f2983995a, type: 3}
+  - {fileID: 2800000, guid: 3600cd05cff7e1743b11c10c7e986076, type: 3}
+  - {fileID: 2800000, guid: 617ef1ee183356443a7709c7d22d02b9, type: 3}
+  - {fileID: 2800000, guid: ab7fa6081edb0f74fb07627d04b402f3, type: 3}
+  - {fileID: 2800000, guid: e352f457a1feda146bf4f4e394c09cc4, type: 3}
+  - {fileID: 2800000, guid: 144ee534962515d4f8e7000b895ac34b, type: 3}
+  - {fileID: 2800000, guid: 7e17b2f9f7feeed44b8452b8c103aa62, type: 3}
+  - {fileID: 2800000, guid: df9ec920a34a0434daac360fade6b39f, type: 3}
+  - {fileID: 2800000, guid: 20c4a71eacfa7db45b32fbc13730639a, type: 3}
+  stillFrameSequence: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e0000000f000000100000001100000012000000130000001400000015000000160000001700000018000000190000001a0000001b0000001c0000001d0000001e0000001f000000
+  stillFrameTime: 0.1
+  flowFrames:
+  - {fileID: 2800000, guid: 2fc1c00da1f3011418e2348181a3bc56, type: 3}
+  - {fileID: 2800000, guid: 45148b6bce12176439df3adcb17bc4b7, type: 3}
+  - {fileID: 2800000, guid: 6940117d8dcce1a4ba97a7a27ddd07b5, type: 3}
+  - {fileID: 2800000, guid: 8c8e12ed9af675d4e955d86796cd3327, type: 3}
+  - {fileID: 2800000, guid: 6f563f5f381010a4794067526570dd17, type: 3}
+  - {fileID: 2800000, guid: fec8943e9ea550248851645754c8d05a, type: 3}
+  - {fileID: 2800000, guid: b3b169a6ee9c0824cb7b2f1f4028034c, type: 3}
+  - {fileID: 2800000, guid: 56d7789222024bb4ab388a490efca91b, type: 3}
+  - {fileID: 2800000, guid: 636bde57401c8f047884acd4c058d07a, type: 3}
+  - {fileID: 2800000, guid: 0f5060da5b49b8f40a1aab1bc6c28916, type: 3}
+  - {fileID: 2800000, guid: a9bf042c9e08fc347b860200cd761bff, type: 3}
+  - {fileID: 2800000, guid: 68a49412dee3e274482fd57e4428b800, type: 3}
+  - {fileID: 2800000, guid: 3d1b5d064eb729e42a9e96ac30a13fb0, type: 3}
+  - {fileID: 2800000, guid: 25c58c73bb9aef04180bb6f6f43db2f7, type: 3}
+  - {fileID: 2800000, guid: ee3ff40ef56e5f24da2e8a19fa23a188, type: 3}
+  - {fileID: 2800000, guid: e454a3766e4f71449995c51605d0a200, type: 3}
+  - {fileID: 2800000, guid: 921dba1d27980394a87be5f6c778cbcc, type: 3}
+  - {fileID: 2800000, guid: cf7edee8a1ef5fe4d8acd77800b59aab, type: 3}
+  - {fileID: 2800000, guid: 57eb048128ae9a249a98069c6aabb615, type: 3}
+  - {fileID: 2800000, guid: f7431bb9732bae04f826c7a35fa967a8, type: 3}
+  - {fileID: 2800000, guid: f7befce5048c41a4894fffa37ff76c77, type: 3}
+  - {fileID: 2800000, guid: 5b54e5f9ea9f39a4ea9a84ba0dbd6676, type: 3}
+  - {fileID: 2800000, guid: e77c288924a8e99409494eb4438550ab, type: 3}
+  - {fileID: 2800000, guid: 1dabe4963d28c294dafc2c457f5aa9a2, type: 3}
+  - {fileID: 2800000, guid: 1fc145f3d69d7df418db7ccda58d5d46, type: 3}
+  - {fileID: 2800000, guid: 61c43dd8cbb6b0444a4cb9e0efb53b8c, type: 3}
+  - {fileID: 2800000, guid: 5bb018745c1e3d344a8186fdefe1889e, type: 3}
+  - {fileID: 2800000, guid: 8b8d794b40c710a4d911fec9f328c6bf, type: 3}
+  - {fileID: 2800000, guid: e50b59946f5a12a43bf5cee90d922f18, type: 3}
+  - {fileID: 2800000, guid: 47565e535fcdeaf41a7e043481ef8218, type: 3}
+  - {fileID: 2800000, guid: 2420500db032ef243aa6c7df9c1aebd0, type: 3}
+  - {fileID: 2800000, guid: 60e95b71bff8460439c09abf496a7f52, type: 3}
+  flowFrameSequence: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e0000000f000000100000001100000012000000130000001400000015000000160000001700000018000000190000001a0000001b0000001c0000001d0000001e0000001f000000
+  flowFrameTime: 0.1
