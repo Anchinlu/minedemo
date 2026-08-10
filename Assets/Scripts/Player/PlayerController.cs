@@ -9,6 +9,7 @@ namespace MineDemo.Player
     public class PlayerController : MonoBehaviour
     {
         public float walkSpeed = 5f;
+        public float flySpeed = 15f;
         public float gravity = -15f;
         public float jumpHeight = 1.2f;
         public float lookSensitivity = 2f;
@@ -25,11 +26,22 @@ namespace MineDemo.Player
         private bool isGrounded;
         private float xRotation = 0f;
 
+        private float waterCheckTimer = 0f;
+        private bool isCurrentlyInWater = false;
+        
+        private bool isFlying = false;
+        private float lastSpacePressTime = -1f;
+
         void Start()
         {
             controller = GetComponent<CharacterController>();
             // Ẩn và khóa con trỏ chuột vào giữa màn hình
             Cursor.lockState = CursorLockMode.Locked; 
+            
+            if (worldManager == null)
+            {
+                worldManager = FindFirstObjectByType<WorldManager>();
+            }
         }
 
         void Update()
@@ -59,19 +71,27 @@ namespace MineDemo.Player
             if (worldManager == null || controller == null)
                 return false;
 
+            waterCheckTimer += Time.deltaTime;
+            if (waterCheckTimer < 0.05f)
+            {
+                return isCurrentlyInWater;
+            }
+            waterCheckTimer = 0f;
+
             Vector3 center = controller.bounds.center;
             int x = Mathf.FloorToInt(center.x);
             int y = Mathf.FloorToInt(center.y);
             int z = Mathf.FloorToInt(center.z);
 
-            BlockType centerType = worldManager.GetExpectedBlock(x, y, z);
+            BlockType centerType = worldManager.GetBlockForPlayerCheck(x, y, z);
             
             Vector3 min = controller.bounds.min;
             int yMin = Mathf.FloorToInt(min.y);
-            BlockType feetType = worldManager.GetExpectedBlock(x, yMin, z);
+            BlockType feetType = worldManager.GetBlockForPlayerCheck(x, yMin, z);
 
-            return (centerType == BlockType.WaterSource || centerType == BlockType.WaterFlow) ||
-                   (feetType == BlockType.WaterSource || feetType == BlockType.WaterFlow);
+            isCurrentlyInWater = (centerType == BlockType.WaterSource || centerType == BlockType.WaterFlow) ||
+                                 (feetType == BlockType.WaterSource || feetType == BlockType.WaterFlow);
+            return isCurrentlyInWater;
         }
 
         private void HandleMovement()
@@ -80,6 +100,23 @@ namespace MineDemo.Player
             if (isGrounded && velocity.y < 0)
             {
                 velocity.y = -2f; 
+                if (isFlying) isFlying = false;
+            }
+
+            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+            {
+                if (Time.time - lastSpacePressTime < 0.3f)
+                {
+                    isFlying = !isFlying;
+                }
+                lastSpacePressTime = Time.time;
+            }
+
+            if (Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
+            {
+                int wx = Mathf.FloorToInt(transform.position.x);
+                int wz = Mathf.FloorToInt(transform.position.z);
+                TerrainGenerator.DebugPrintTerrainInfo(wx, wz);
             }
 
             float x = 0f;
@@ -91,6 +128,19 @@ namespace MineDemo.Player
                 if (Keyboard.current.sKey.isPressed) z -= 1f;
                 if (Keyboard.current.aKey.isPressed) x -= 1f;
                 if (Keyboard.current.dKey.isPressed) x += 1f;
+            }
+
+            if (isFlying)
+            {
+                velocity.y = 0f;
+                if (Keyboard.current != null)
+                {
+                    if (Keyboard.current.spaceKey.isPressed) velocity.y = flySpeed;
+                    if (Keyboard.current.leftShiftKey.isPressed) velocity.y = -flySpeed;
+                }
+                Vector3 moveFly = transform.right * x + transform.forward * z;
+                controller.Move(moveFly.normalized * flySpeed * Time.deltaTime + velocity * Time.deltaTime);
+                return;
             }
 
             bool inWater = IsInWater();

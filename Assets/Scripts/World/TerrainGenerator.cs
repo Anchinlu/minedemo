@@ -19,10 +19,12 @@ namespace MineDemo.World
         private const int MinBuildY = WorldBounds.MinBuildY;
         private const int MaxBuildY = WorldBounds.MaxBuildY;
 
-        public static void GenerateChunkData(int chunkX, int chunkZ, int width, int height, int depth, out BlockType[] blocks, out byte[] waterLevels)
+        public static void GenerateChunkData(int chunkX, int chunkZ, int width, int height, int depth, out BlockType[] blocks, out byte[] waterLevels, out int minOccupiedLocalY, out int maxOccupiedLocalY)
         {
             blocks = new BlockType[width * height * depth];
             waterLevels = new byte[width * height * depth];
+            minOccupiedLocalY = height - 1;
+            maxOccupiedLocalY = 0;
 
             for (int x = 0; x < width; x++)
             {
@@ -34,7 +36,7 @@ namespace MineDemo.World
                     GenerateColumn(worldX, worldZ, out int surfaceY, out bool isWater, out BiomeType biome);
 
                     // Cave carving variables
-                    float caveScale = 0.03f;
+                    // float caveScale = 0.03f; // Tạm tắt cave
 
                     for (int worldY = MinBuildY; worldY < MaxBuildY; worldY++)
                     {
@@ -68,6 +70,11 @@ namespace MineDemo.World
                         */
 
                         blocks[index] = expectedBlock;
+                        if (expectedBlock != BlockType.Air)
+                        {
+                            if (yLocal < minOccupiedLocalY) minOccupiedLocalY = yLocal;
+                            if (yLocal > maxOccupiedLocalY) maxOccupiedLocalY = yLocal;
+                        }
 
                         if (expectedBlock == BlockType.WaterSource && waterLevels[index] == 0)
                         {
@@ -75,6 +82,16 @@ namespace MineDemo.World
                         }
                     }
                 }
+            }
+
+            // Bảo đảm Bedrock luôn nằm trong phạm vi (MinBuildY -> 0)
+            minOccupiedLocalY = 0;
+            
+            if (minOccupiedLocalY > maxOccupiedLocalY)
+            {
+                minOccupiedLocalY = 0;
+                maxOccupiedLocalY = 0;
+                UnityEngine.Debug.LogWarning($"[TerrainGenerator] Chunk {chunkX},{chunkZ} hoàn toàn rỗng ngoài dự kiến, fallback bounds 0..0.");
             }
         }
 
@@ -134,16 +151,16 @@ namespace MineDemo.World
 
             // Rivers (Ridge noise)
             isWater = false;
-            float riverNoiseScale = 0.008f;
-            float riverNoise1 = Mathf.PerlinNoise((worldX + Seed) * riverNoiseScale, (worldZ + Seed) * riverNoiseScale);
-            float riverNoise2 = Mathf.PerlinNoise((worldX + Seed * 2) * riverNoiseScale * 0.5f, (worldZ + Seed * 2) * riverNoiseScale * 0.5f);
-            
-            float combinedRiver = Mathf.Lerp(riverNoise1, riverNoise2, 0.5f);
-            float ridge = Mathf.Abs(combinedRiver - 0.5f) * 2f; 
+            float riverNoiseScale = 0.005f;
+            float riverNoise = Mathf.PerlinNoise((worldX + Seed * 7) * riverNoiseScale, (worldZ + Seed * 7) * riverNoiseScale);
+            float ridge = Mathf.Abs(riverNoise - 0.5f) * 2f; 
             
             // Smooth step based on distance to center
-            float riverMask = 1f - Mathf.SmoothStep(0.01f, 0.08f, ridge); // 1 tại tâm, 0 tại bờ
-            float riverDepth = riverMask * 12f; 
+            float riverMask = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.05f, ridge)); // 1 tại tâm, 0 tại bờ
+            
+            float riverDepthNoise = Mathf.PerlinNoise((worldX + Seed * 8) * 0.02f, (worldZ + Seed * 8) * 0.02f);
+            float maxRiverDepth = Mathf.Lerp(6f, 14f, riverDepthNoise);
+            float riverDepth = riverMask * maxRiverDepth;
             float riverSurface = rawHeight - riverDepth;
             float bankBlend = Mathf.SmoothStep(0f, 1f, riverMask);
             
@@ -152,7 +169,7 @@ namespace MineDemo.World
             // Lakes
             float lakeNoiseScale = 0.01f;
             float lakeNoise = Mathf.PerlinNoise((worldX + Seed + 999) * lakeNoiseScale, (worldZ + Seed + 999) * lakeNoiseScale);
-            float lakeMask = Mathf.SmoothStep(0.6f, 0.8f, lakeNoise);
+            float lakeMask = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.6f, 0.8f, lakeNoise));
             
             float lakeDepth = lakeMask * 16f;
             float lakeSurface = rawHeight - lakeDepth;
@@ -228,6 +245,34 @@ namespace MineDemo.World
             }
 
             return BlockType.Air;
+        }
+
+        public static void DebugPrintTerrainInfo(int worldX, int worldZ)
+        {
+            float cont = Mathf.PerlinNoise(worldX * 0.001f + Seed, worldZ * 0.001f + Seed);
+            float baseHeight = 62f + (cont - 0.5f) * 40f; 
+
+            float riverNoiseScale = 0.005f;
+            float riverNoise = Mathf.PerlinNoise((worldX + Seed * 7) * riverNoiseScale, (worldZ + Seed * 7) * riverNoiseScale);
+            float ridge = Mathf.Abs(riverNoise - 0.5f) * 2f; 
+            float riverMask = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.05f, ridge)); // 0 ở lòng sông, 1 ở mép/xa sông
+            
+            float riverDepthNoise = Mathf.PerlinNoise((worldX + Seed * 8) * 0.02f, (worldZ + Seed * 8) * 0.02f);
+            float maxRiverDepth = Mathf.Lerp(6f, 14f, riverDepthNoise);
+            float riverDepth = (1f - riverMask) * maxRiverDepth;
+
+            float lakeNoiseScale = 0.01f;
+            float lakeNoise = Mathf.PerlinNoise((worldX + Seed + 999) * lakeNoiseScale, (worldZ + Seed + 999) * lakeNoiseScale);
+            float lakeMask = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.6f, 0.8f, lakeNoise)); // 0 khi < 0.6, 1 khi > 0.8
+            float lakeDepth = lakeMask * 16f;
+
+            float bedNoise = Mathf.PerlinNoise(worldX * 0.05f + Seed, worldZ * 0.05f + Seed);
+            float bankNoise = Mathf.PerlinNoise(worldX * 0.05f + Seed, worldZ * 0.05f + Seed);
+
+            Debug.Log($"[TerrainDebug] POS X:{worldX} Z:{worldZ}\n" +
+                      $"-- LAKES: Noise={lakeNoise:F3}, Mask={lakeMask:F3}, Depth={lakeDepth:F1}\n" +
+                      $"-- RIVERS: Ridge={ridge:F3}, Mask={riverMask:F3}, Depth={riverDepth:F1}\n" +
+                      $"-- MATERIALS: BedNoise={bedNoise:F3}, BankNoise={bankNoise:F3}");
         }
     }
 }

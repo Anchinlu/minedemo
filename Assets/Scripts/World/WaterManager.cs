@@ -33,6 +33,7 @@ namespace MineDemo.World
         private int stillIndex = 0;
         private float flowTimer = 0f;
         private int flowIndex = 0;
+        private Material grassParticleMaterial;
 
         void Awake()
         {
@@ -40,10 +41,12 @@ namespace MineDemo.World
             {
                 Instance = this;
                 CreateWaterMaterial();
+                grassParticleMaterial = new Material(Shader.Find("Standard"));
+                grassParticleMaterial.color = new Color(0.3f, 0.6f, 0.2f); // Màu xanh cỏ
             }
             else
             {
-                Destroy(this);
+                Destroy(gameObject);
             }
         }
 
@@ -233,8 +236,7 @@ namespace MineDemo.World
                 particle.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f);
                 
                 MeshRenderer renderer = particle.GetComponent<MeshRenderer>();
-                renderer.material = new Material(Shader.Find("Standard"));
-                renderer.material.color = new Color(0.3f, 0.6f, 0.2f); // Màu xanh cỏ
+                renderer.sharedMaterial = grassParticleMaterial;
                 
                 Rigidbody rb = particle.AddComponent<Rigidbody>();
                 rb.AddExplosionForce(150f, particle.transform.position - Vector3.up * 0.5f, 2f);

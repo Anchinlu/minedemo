@@ -14,6 +14,7 @@ namespace MineDemo.World
         private BlockType[] blocks;
         private byte[] waterLevels;
 
+        private MeshRenderer meshRenderer;
         private MeshFilter meshFilter;
         private MeshCollider meshCollider;
 
@@ -23,28 +24,68 @@ namespace MineDemo.World
         public AtlasData atlasData;
         
         private MeshFilter decorationFilter;
+        private MeshRenderer decorationRenderer;
         private MeshFilter fluidFilter;
         private MeshRenderer fluidRenderer;
+
+        private int meshMinLocalY;
+        private int meshMaxLocalY;
+        private const int MeshSafetyMargin = 1;
+
+        private bool hasGeneratedMeshOnce = false;
+        private float lastRebuildTime = -1f;
+        private int rebuildsThisSecond = 0;
+
+        // GC Pooling
+        private List<Vector3> vertices = new List<Vector3>(4000);
+        private List<int> triangles = new List<int>(4000);
+        private List<Vector2> uvs = new List<Vector2>(4000);
+        private List<Color> colors = new List<Color>(4000);
+
+        private List<Vector3> decVertices = new List<Vector3>(1000);
+        private List<int> decTriangles = new List<int>(1000);
+        private List<Vector2> decUvs = new List<Vector2>(1000);
+        private List<Color> decColors = new List<Color>(1000);
+
+        private List<Vector3> fluidVertices = new List<Vector3>(1000);
+        private List<int> stillTriangles = new List<int>(1000);
+        private List<int> flowTriangles = new List<int>(1000);
+        private List<Vector2> fluidUvs = new List<Vector2>(1000);
+        private List<Color> fluidColors = new List<Color>(1000);
+
+        private Mesh mainMesh;
+        private Mesh decMesh;
+        private Mesh fluidMesh;
 
         void Awake()
         {
             blocks = new BlockType[Width * Height * Depth];
             waterLevels = new byte[Width * Height * Depth];
+            meshRenderer = GetComponent<MeshRenderer>();
             meshFilter = GetComponent<MeshFilter>();
             meshCollider = GetComponent<MeshCollider>();
+
+            mainMesh = new Mesh();
+            mainMesh.name = "ChunkMainMesh";
+            meshFilter.sharedMesh = mainMesh;
             
             GameObject decObj = new GameObject("Decoration");
-            decObj.transform.parent = this.transform;
+            decObj.transform.parent = transform;
             decObj.transform.localPosition = Vector3.zero;
             decorationFilter = decObj.AddComponent<MeshFilter>();
-            MeshRenderer decRenderer = decObj.AddComponent<MeshRenderer>();
-            decRenderer.material = GetComponent<MeshRenderer>().sharedMaterial;
+            decorationRenderer = decObj.AddComponent<MeshRenderer>();
+            decMesh = new Mesh();
+            decMesh.name = "ChunkDecMesh";
+            decorationFilter.sharedMesh = decMesh;
 
-            GameObject fluidObj = new GameObject("FluidMesh");
-            fluidObj.transform.parent = this.transform;
+            GameObject fluidObj = new GameObject("Fluid");
+            fluidObj.transform.parent = transform;
             fluidObj.transform.localPosition = Vector3.zero;
             fluidFilter = fluidObj.AddComponent<MeshFilter>();
             fluidRenderer = fluidObj.AddComponent<MeshRenderer>();
+            fluidMesh = new Mesh();
+            fluidMesh.name = "ChunkFluidMesh";
+            fluidFilter.sharedMesh = fluidMesh;
             fluidRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
@@ -79,6 +120,8 @@ namespace MineDemo.World
                             if (WaterManager.Instance != null)
                                 WaterManager.Instance.EnqueueWaterUpdate(wPos, level);
                         }
+                        if (kvp.Value != BlockType.Air)
+                            IncludeLocalYInMeshBounds(localY);
                     }
                 }
             }
@@ -101,6 +144,8 @@ namespace MineDemo.World
                         if (localY >= 0 && localY < Height)
                         {
                             SetBlockLocal(localX, localY, localZ, kvp.Value);
+                            if (kvp.Value != BlockType.Air)
+                                IncludeLocalYInMeshBounds(localY);
                         }
                     }
                 }
@@ -109,8 +154,7 @@ namespace MineDemo.World
             // Sinh cây cho chunk này
             TreeGenerator.GenerateChunkTrees(this, 12345); // Dùng seed tĩnh tạm thời
 
-            MeshRenderer decRenderer = decorationFilter.GetComponent<MeshRenderer>();
-            decRenderer.material = GetComponent<MeshRenderer>().sharedMaterial;
+            decorationRenderer.material = GetComponent<MeshRenderer>().sharedMaterial;
             
             if (WaterManager.Instance == null)
             {
@@ -142,14 +186,27 @@ namespace MineDemo.World
             return Color.Lerp(baseGrass, new Color(0.31f, 0.59f, 0.19f), t);
         }
 
+        private void IncludeLocalYInMeshBounds(int localY)
+        {
+            if (localY < 0 || localY >= Height)
+                return;
+
+            meshMinLocalY = Mathf.Min(meshMinLocalY, localY);
+            meshMaxLocalY = Mathf.Max(meshMaxLocalY, localY);
+        }
+
         private void GenerateTerrain()
         {
-            TerrainGenerator.GenerateChunkData(chunkX, chunkZ, Width, Height, Depth, out blocks, out waterLevels);
+            TerrainGenerator.GenerateChunkData(chunkX, chunkZ, Width, Height, Depth, out blocks, out waterLevels, out int minOccupiedLocalY, out int maxOccupiedLocalY);
+            meshMinLocalY = Mathf.Max(0, minOccupiedLocalY - MeshSafetyMargin);
+            meshMaxLocalY = Mathf.Min(Height - 1, maxOccupiedLocalY + MeshSafetyMargin);
         }
 
         private void SetBlock(int x, int y, int z, BlockType type)
         {
             blocks[x + Width * (y + Height * z)] = type;
+            if (type != BlockType.Air)
+                IncludeLocalYInMeshBounds(y);
         }
 
         private BlockType GetBlock(int x, int y, int z)
@@ -183,6 +240,8 @@ namespace MineDemo.World
         {
             if (x < 0 || x >= Width || y < 0 || y >= Height || z < 0 || z >= Depth) return;
             blocks[x + Width * (y + Height * z)] = type;
+            if (type != BlockType.Air)
+                IncludeLocalYInMeshBounds(y);
         }
 
         public byte GetWaterLevelLocal(int x, int y, int z)
@@ -203,19 +262,15 @@ namespace MineDemo.World
             int localY = worldY - WorldBounds.MinBuildY;
             if (localX >= 0 && localX < Width && localY >= 0 && localY < Height && localZ >= 0 && localZ < Depth)
             {
-                SetBlock(localX, localY, localZ, newType);
+                if (GetBlockLocal(localX, localY, localZ) == newType)
+                    return;
+
+                SetBlockLocal(localX, localY, localZ, newType);
                 if (newType == BlockType.Air)
                 {
                     SetWaterLevelLocal(localX, localY, localZ, 0); // Xoá nước nếu có
                 }
                 
-                // Clear toàn bộ mesh cũ trước khi generate
-                meshFilter.mesh.Clear();
-                fluidFilter.mesh.Clear();
-                decorationFilter.mesh.Clear();
-                if (meshCollider != null && meshCollider.sharedMesh != null)
-                    meshCollider.sharedMesh.Clear();
-
                 GenerateMesh();
             }
         }
@@ -250,25 +305,29 @@ namespace MineDemo.World
 
         public void GenerateMesh()
         {
-            List<Vector3> vertices = new List<Vector3>();
-            List<int> triangles = new List<int>();
-            List<Vector2> uvs = new List<Vector2>();
-            List<Color> colors = new List<Color>();
+            long startMemory = System.GC.GetTotalMemory(false);
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
 
-            List<Vector3> decVertices = new List<Vector3>();
-            List<int> decTriangles = new List<int>();
-            List<Vector2> decUvs = new List<Vector2>();
-            List<Color> decColors = new List<Color>();
+            vertices.Clear();
+            triangles.Clear();
+            uvs.Clear();
+            colors.Clear();
 
-            List<Vector3> fluidVertices = new List<Vector3>();
-            List<int> stillTriangles = new List<int>();
-            List<int> flowTriangles = new List<int>();
-            List<Vector2> fluidUvs = new List<Vector2>();
-            List<Color> fluidColors = new List<Color>();
+            decVertices.Clear();
+            decTriangles.Clear();
+            decUvs.Clear();
+            decColors.Clear();
+
+            fluidVertices.Clear();
+            stillTriangles.Clear();
+            flowTriangles.Clear();
+            fluidUvs.Clear();
+            fluidColors.Clear();
 
             for (int x = 0; x < Width; x++)
             {
-                for (int y = 0; y < Height; y++)
+                for (int y = meshMinLocalY; y <= meshMaxLocalY; y++)
                 {
                     for (int z = 0; z < Depth; z++)
                     {
@@ -349,36 +408,64 @@ namespace MineDemo.World
                 }
             }
 
-            Mesh mesh = new Mesh();
-            mesh.vertices = vertices.ToArray();
-            mesh.triangles = triangles.ToArray();
-            mesh.uv = uvs.ToArray();
-            mesh.colors = colors.ToArray();
-            mesh.RecalculateNormals();
+            mainMesh.Clear();
+            mainMesh.SetVertices(vertices);
+            mainMesh.SetTriangles(triangles, 0);
+            mainMesh.SetUVs(0, uvs);
+            mainMesh.SetColors(colors);
+            mainMesh.RecalculateNormals();
 
-            meshFilter.mesh = mesh;
             if (meshCollider != null)
-                meshCollider.sharedMesh = mesh;
+            {
+                meshCollider.sharedMesh = null;
+                meshCollider.sharedMesh = mainMesh;
+            }
 
-            Mesh decMesh = new Mesh();
-            decMesh.vertices = decVertices.ToArray();
-            decMesh.triangles = decTriangles.ToArray();
-            decMesh.uv = decUvs.ToArray();
-            decMesh.colors = decColors.ToArray();
+            decMesh.Clear();
+            decMesh.SetVertices(decVertices);
+            decMesh.SetTriangles(decTriangles, 0);
+            decMesh.SetUVs(0, decUvs);
+            decMesh.SetColors(decColors);
             decMesh.RecalculateNormals();
-            
-            decorationFilter.mesh = decMesh;
 
-            Mesh fluidMesh = new Mesh();
-            fluidMesh.vertices = fluidVertices.ToArray();
-            fluidMesh.subMeshCount = 2; // 0: Still, 1: Flow
-            fluidMesh.SetTriangles(stillTriangles.ToArray(), 0);
-            fluidMesh.SetTriangles(flowTriangles.ToArray(), 1);
-            fluidMesh.uv = fluidUvs.ToArray();
-            fluidMesh.colors = fluidColors.ToArray();
+            fluidMesh.Clear();
+            fluidMesh.subMeshCount = 2;
+            fluidMesh.SetVertices(fluidVertices);
+            fluidMesh.SetTriangles(stillTriangles, 0);
+            fluidMesh.SetTriangles(flowTriangles, 1);
+            fluidMesh.SetUVs(0, fluidUvs);
+            fluidMesh.SetColors(fluidColors);
             fluidMesh.RecalculateNormals();
 
-            fluidFilter.mesh = fluidMesh;
+            sw.Stop();
+            long memoryDelta = System.GC.GetTotalMemory(false) - startMemory;
+
+            if (Time.time - lastRebuildTime > 1.0f)
+            {
+                rebuildsThisSecond = 1;
+                lastRebuildTime = Time.time;
+            }
+            else
+            {
+                rebuildsThisSecond++;
+            }
+
+            if (MineDemo.Utils.ProfilerLogger.Instance != null)
+            {
+                MineDemo.Utils.ProfilerLogger.Instance.LogMeshGeneration(
+                    $"Chunk_{chunkX}_{chunkZ}", 
+                    sw.ElapsedMilliseconds, 
+                    vertices.Count + fluidVertices.Count + decVertices.Count,
+                    (triangles.Count + flowTriangles.Count + stillTriangles.Count + decTriangles.Count) / 3,
+                    memoryDelta,
+                    meshMinLocalY,
+                    meshMaxLocalY,
+                    !hasGeneratedMeshOnce,
+                    rebuildsThisSecond
+                );
+            }
+            
+            hasGeneratedMeshOnce = true;
         }
 
         private void AddFace(List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, List<Color> colors, int x, int y, int z, Vector3 direction, TextureId tex, Color tintColor)
