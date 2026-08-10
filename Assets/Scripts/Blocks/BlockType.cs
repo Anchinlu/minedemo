@@ -10,7 +10,22 @@ namespace MineDemo.Blocks
         OakLeaves,
         WaterSource,
         WaterFlow,
-        Sand,
-        Bedrock
+        Sand = 13,
+        Bedrock = 14,
+        
+        // Phase 1: Địa chất nền
+        Gravel = 15,
+        Cobblestone,
+        Deepslate,
+        CoarseDirt,
+        Clay,
+        
+        // Phase 2
+        Sandstone,
+        Snow,
+        GrassSnow,
+        Ice,
+        PackedIce,
+        Mud
     }
 }

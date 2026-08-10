@@ -6,7 +6,7 @@ namespace MineDemo.World
         public const int MaxBuildY = 300;
         public const int WorldHeight = MaxBuildY - MinBuildY;
         
-        public const int SeaLevel = 62;
+        public const int SeaLevel = 63;
         public const int CloudMinY = 150;
         public const int CloudMaxY = 220;
     }

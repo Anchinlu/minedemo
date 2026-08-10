@@ -25,7 +25,9 @@ namespace MineDemo.World
                     int worldZ = chunk.chunkZ * Chunk.Depth + z;
                     
                     BiomeType biome = TerrainGenerator.GetBiome(worldX, worldZ);
-                    if (biome == BiomeType.RiverLake) continue; // Không sinh cây ở sông/hồ
+                    if (biome == BiomeType.RiverLake || biome == BiomeType.FrozenRiverLake ||
+                        biome == BiomeType.Desert || biome == BiomeType.SnowyPlains ||
+                        biome == BiomeType.SnowyMountains) continue; // Chỉ sinh Oak ở Plains, Forest, Hills, Mountains
 
                     int hash = (worldX * 3129871 ^ worldZ * 631453 ^ seed) % 100;
                     if (hash < 0) hash = -hash;

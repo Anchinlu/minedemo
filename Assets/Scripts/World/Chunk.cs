@@ -151,8 +151,8 @@ namespace MineDemo.World
                 }
             }
 
-            // Sinh cây cho chunk này
-            TreeGenerator.GenerateChunkTrees(this, 12345); // Dùng seed tĩnh tạm thời
+            // Sinh các Feature cho chunk này (Cây cối, thực vật)
+            FeaturePlacer.PlaceChunkFeatures(this, TerrainGenerator.Seed);
 
             decorationRenderer.material = GetComponent<MeshRenderer>().sharedMaterial;
             
@@ -177,13 +177,23 @@ namespace MineDemo.World
         {
             BiomeType biome = TerrainGenerator.GetBiome(worldX, worldZ);
             Color baseGrass = new Color(0.36f, 0.68f, 0.20f);
+            Color finalTint = baseGrass;
             
-            if (biome == BiomeType.Forest) return new Color(0.25f, 0.55f, 0.15f);
-            if (biome == BiomeType.Mountains) return new Color(0.31f, 0.59f, 0.19f); // Tối hơn
-            if (biome == BiomeType.Hills) return new Color(0.33f, 0.63f, 0.18f);
+            if (biome == BiomeType.Forest) finalTint = new Color(0.30f, 0.60f, 0.18f);
+            else if (biome == BiomeType.Mountains) finalTint = new Color(0.31f, 0.59f, 0.18f);
+            else if (biome == BiomeType.Hills) finalTint = new Color(0.33f, 0.63f, 0.18f);
+            else
+            {
+                float t = Mathf.InverseLerp(62f, 150f, worldY);
+                finalTint = Color.Lerp(baseGrass, new Color(0.31f, 0.59f, 0.18f), t);
+            }
             
-            float t = Mathf.InverseLerp(62f, 150f, worldY);
-            return Color.Lerp(baseGrass, new Color(0.31f, 0.59f, 0.19f), t);
+            // Limit how dark grass can get
+            finalTint.r = Mathf.Max(finalTint.r, 0.30f);
+            finalTint.g = Mathf.Max(finalTint.g, 0.58f);
+            finalTint.b = Mathf.Max(finalTint.b, 0.17f);
+            
+            return finalTint;
         }
 
         private void IncludeLocalYInMeshBounds(int localY)
@@ -200,6 +210,33 @@ namespace MineDemo.World
             TerrainGenerator.GenerateChunkData(chunkX, chunkZ, Width, Height, Depth, out blocks, out waterLevels, out int minOccupiedLocalY, out int maxOccupiedLocalY);
             meshMinLocalY = Mathf.Max(0, minOccupiedLocalY - MeshSafetyMargin);
             meshMaxLocalY = Mathf.Min(Height - 1, maxOccupiedLocalY + MeshSafetyMargin);
+
+            int minSurfaceY = 999;
+            int maxSurfaceY = -999;
+            int grassCount = 0, dirtCount = 0, stoneCount = 0, airCount = 0;
+
+            for (int x = 0; x < Width; x++)
+            {
+                for (int z = 0; z < Depth; z++)
+                {
+                    int worldX = chunkX * Width + x;
+                    int worldZ = chunkZ * Depth + z;
+                    TerrainShapeResult shape = TerrainShapeGenerator.GenerateShape(worldX, worldZ, TerrainGenerator.Seed);
+                    if (shape.surfaceY < minSurfaceY) minSurfaceY = shape.surfaceY;
+                    if (shape.surfaceY > maxSurfaceY) maxSurfaceY = shape.surfaceY;
+                }
+            }
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                BlockType b = blocks[i];
+                if (b == BlockType.Grass || b == BlockType.GrassSnow) grassCount++;
+                else if (b == BlockType.Dirt || b == BlockType.CoarseDirt) dirtCount++;
+                else if (b == BlockType.Stone || b == BlockType.Cobblestone || b == BlockType.Deepslate || b == BlockType.Sandstone) stoneCount++;
+                else if (b == BlockType.Air) airCount++;
+            }
+
+            Debug.Log($"[ChunkTerrain] {chunkX},{chunkZ} surfaceMin={minSurfaceY} surfaceMax={maxSurfaceY} grass={grassCount} dirt={dirtCount} stone={stoneCount} air={airCount}");
         }
 
         private void SetBlock(int x, int y, int z, BlockType type)
@@ -221,7 +258,7 @@ namespace MineDemo.World
                     int worldX = chunkX * Width + x;
                     int worldY = y + WorldBounds.MinBuildY;
                     int worldZ = chunkZ * Depth + z;
-                    return worldManager.GetExpectedBlock(worldX, worldY, worldZ);
+                    return worldManager.GetBlockFromWorld(worldX, worldY, worldZ);
                 }
                 return BlockType.Air;
             }
@@ -251,6 +288,24 @@ namespace MineDemo.World
             return waterLevels[x + Width * (y + Height * z)];
         }
 
+        private byte GetWaterLevelForMesh(int localX, int localY, int localZ)
+        {
+            if (localX >= 0 && localX < Width &&
+                localY >= 0 && localY < Height &&
+                localZ >= 0 && localZ < Depth)
+            {
+                return GetWaterLevelLocal(localX, localY, localZ);
+            }
+
+            int worldX = chunkX * Width + localX;
+            int worldY = localY + WorldBounds.MinBuildY;
+            int worldZ = chunkZ * Depth + localZ;
+
+            return worldManager == null
+                ? (byte)0
+                : worldManager.GetWaterLevelWorld(worldX, worldY, worldZ);
+        }
+
         public void SetWaterLevelLocal(int x, int y, int z, byte level)
         {
             if (x < 0 || x >= Width || y < 0 || y >= Height || z < 0 || z >= Depth) return;
@@ -277,30 +332,16 @@ namespace MineDemo.World
 
         private TextureId GetTextureId(BlockType type, Vector3 direction)
         {
-            if (type == BlockType.Dirt) return TextureId.Dirt;
-            if (type == BlockType.Stone) return TextureId.Stone;
-            if (type == BlockType.Sand) return TextureId.Sand;
-            if (type == BlockType.Bedrock) return TextureId.Bedrock;
-            if (type == BlockType.Grass)
-            {
-                if (direction == Vector3.up) return TextureId.GrassTop;
-                if (direction == Vector3.down) return TextureId.Dirt;
-                return TextureId.GrassSide;
-            }
-            if (type == BlockType.OakLog)
-            {
-                if (direction == Vector3.up || direction == Vector3.down) return TextureId.OakLogTop;
-                return TextureId.OakLogSide;
-            }
-            if (type == BlockType.OakLeaves) return TextureId.OakLeaves;
-            
-            return TextureId.Dirt;
+            var def = BlockRegistry.Get(type);
+            if (direction == Vector3.up) return def.top;
+            if (direction == Vector3.down) return def.bottom;
+            return def.side;
         }
 
         private bool IsTransparent(BlockType type)
         {
-            // Các khối cho phép nhìn xuyên qua (Cần vẽ mặt cho khối đứng cạnh nó)
-            return type == BlockType.Air || type == BlockType.OakLeaves;
+            if (type == BlockType.Air || type == BlockType.WaterSource || type == BlockType.WaterFlow) return true;
+            return BlockRegistry.Get(type).isTransparent || !BlockRegistry.Get(type).isSolid;
         }
 
         public void GenerateMesh()
@@ -325,6 +366,9 @@ namespace MineDemo.World
             fluidUvs.Clear();
             fluidColors.Clear();
 
+            int waterCells = 0, topFaces = 0, sideFaces = 0, bottomFaces = 0;
+            int solidFacesCount = 0;
+
             for (int x = 0; x < Width; x++)
             {
                 for (int y = meshMinLocalY; y <= meshMaxLocalY; y++)
@@ -335,60 +379,99 @@ namespace MineDemo.World
 
                         if (type == BlockType.WaterSource || type == BlockType.WaterFlow)
                         {
+                            waterCells++;
                             byte level = GetWaterLevelLocal(x, y, z);
-                            float waterHeight = GetWaterHeight(level);
-
+                            
                             BlockType upBlock = GetBlock(x, y + 1, z);
                             bool hasWaterAbove = upBlock == BlockType.WaterSource || upBlock == BlockType.WaterFlow;
+                            
+                            float topHeight = GetCellTopHeight(hasWaterAbove, level);
+                            float sideHeight = hasWaterAbove ? 1.0f : topHeight;
                             
                             List<int> targetTriangles = (type == BlockType.WaterSource) ? stillTriangles : flowTriangles;
 
                             if (!hasWaterAbove)
-                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.up, waterHeight); 
+                            {
+                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.up, topHeight); 
+                                topFaces++;
+                            }
 
                             if (ShouldRenderWaterFace(x, y - 1, z, level, Vector3.down))
-                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.down, waterHeight);
+                            {
+                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.down, sideHeight);
+                                bottomFaces++;
+                            }
 
                             if (ShouldRenderWaterFace(x, y, z + 1, level, Vector3.forward))
-                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.forward, waterHeight);
+                            {
+                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.forward, sideHeight);
+                                sideFaces++;
+                            }
 
                             if (ShouldRenderWaterFace(x, y, z - 1, level, Vector3.back))
-                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.back, waterHeight);
+                            {
+                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.back, sideHeight);
+                                sideFaces++;
+                            }
 
                             if (ShouldRenderWaterFace(x + 1, y, z, level, Vector3.right))
-                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.right, waterHeight);
+                            {
+                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.right, sideHeight);
+                                sideFaces++;
+                            }
 
                             if (ShouldRenderWaterFace(x - 1, y, z, level, Vector3.left))
-                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.left, waterHeight);
+                            {
+                                AddWaterFace(fluidVertices, targetTriangles, fluidUvs, fluidColors, x, y, z, Vector3.left, sideHeight);
+                                sideFaces++;
+                            }
                         }
                         else if (type != BlockType.Air)
                         {
-                            Color faceColor = Color.white;
+                            Color baseColor = Color.white;
                             if (type == BlockType.Grass)
                             {
                                 int worldX = chunkX * Width + x;
                                 int worldY = y + WorldBounds.MinBuildY;
                                 int worldZ = chunkZ * Depth + z;
-                                faceColor = GetGrassTint(worldX, worldY, worldZ);
+                                baseColor = GetGrassTint(worldX, worldY, worldZ);
                             }
 
                             if (IsTransparent(GetBlock(x, y + 1, z)))
-                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.up, GetTextureId(type, Vector3.up), faceColor);
+                            {
+                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.up, GetTextureId(type, Vector3.up), baseColor * GetMaterialFaceShade(type, Vector3.up));
+                                solidFacesCount++;
+                            }
 
                             if (IsTransparent(GetBlock(x, y - 1, z)))
-                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.down, GetTextureId(type, Vector3.down), faceColor);
+                            {
+                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.down, GetTextureId(type, Vector3.down), baseColor * GetMaterialFaceShade(type, Vector3.down));
+                                solidFacesCount++;
+                            }
 
                             if (IsTransparent(GetBlock(x, y, z + 1)))
-                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.forward, GetTextureId(type, Vector3.forward), faceColor);
+                            {
+                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.forward, GetTextureId(type, Vector3.forward), baseColor * GetMaterialFaceShade(type, Vector3.forward));
+                                solidFacesCount++;
+                            }
 
                             if (IsTransparent(GetBlock(x, y, z - 1)))
-                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.back, GetTextureId(type, Vector3.back), faceColor);
+                            {
+                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.back, GetTextureId(type, Vector3.back), baseColor * GetMaterialFaceShade(type, Vector3.back));
+                                solidFacesCount++;
+                            }
 
                             if (IsTransparent(GetBlock(x + 1, y, z)))
-                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.right, GetTextureId(type, Vector3.right), faceColor);
+                            {
+                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.right, GetTextureId(type, Vector3.right), baseColor * GetMaterialFaceShade(type, Vector3.right));
+                                solidFacesCount++;
+                            }
 
                             if (IsTransparent(GetBlock(x - 1, y, z)))
-                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.left, GetTextureId(type, Vector3.left), faceColor);
+                            {
+                                AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.left, GetTextureId(type, Vector3.left), baseColor * GetMaterialFaceShade(type, Vector3.left));
+                                solidFacesCount++;
+                            }
 
                             // Sinh cỏ thấp ngẫu nhiên trên khối Grass
                             if (type == BlockType.Grass && GetBlock(x, y + 1, z) == BlockType.Air)
@@ -414,6 +497,7 @@ namespace MineDemo.World
             mainMesh.SetUVs(0, uvs);
             mainMesh.SetColors(colors);
             mainMesh.RecalculateNormals();
+            mainMesh.RecalculateBounds();
 
             if (meshCollider != null)
             {
@@ -427,6 +511,7 @@ namespace MineDemo.World
             decMesh.SetUVs(0, decUvs);
             decMesh.SetColors(decColors);
             decMesh.RecalculateNormals();
+            decMesh.RecalculateBounds();
 
             fluidMesh.Clear();
             fluidMesh.subMeshCount = 2;
@@ -436,6 +521,11 @@ namespace MineDemo.World
             fluidMesh.SetUVs(0, fluidUvs);
             fluidMesh.SetColors(fluidColors);
             fluidMesh.RecalculateNormals();
+            fluidMesh.RecalculateBounds();
+
+            // Lệnh ghi log mới theo yêu cầu kiểm tra
+            Debug.Log($"[WaterMesh] chunk={chunkX},{chunkZ} waterCells={waterCells} topFaces={topFaces} sideFaces={sideFaces} bottomFaces={bottomFaces}");
+            Debug.Log($"[TerrainMesh] chunk={chunkX},{chunkZ} solidFaces={solidFacesCount}");
 
             sw.Stop();
             long memoryDelta = System.GC.GetTotalMemory(false) - startMemory;
@@ -466,6 +556,25 @@ namespace MineDemo.World
             }
             
             hasGeneratedMeshOnce = true;
+        }
+
+        private static float GetFaceShade(Vector3 direction)
+        {
+            if (direction == Vector3.up) return 1.00f;
+            if (direction == Vector3.down) return 0.78f;
+            if (direction == Vector3.forward || direction == Vector3.back) return 0.93f;
+            return 0.88f;
+        }
+
+        private static float GetMaterialFaceShade(BlockType type, Vector3 direction)
+        {
+            if (type == BlockType.Grass)
+            {
+                if (direction == Vector3.up) return 1.00f;
+                if (direction == Vector3.down) return 0.82f;
+                return 0.96f;
+            }
+            return GetFaceShade(direction);
         }
 
         private void AddFace(List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, List<Color> colors, int x, int y, int z, Vector3 direction, TextureId tex, Color tintColor)
@@ -532,15 +641,16 @@ namespace MineDemo.World
             uvs.Add(rect.bottomRight);
             
             // Tính toán màu thực tế cho mặt này
-            Color actualColor = Color.white;
-            if (tex == TextureId.GrassTop || tex == TextureId.OakLeaves || tex == TextureId.ShortGrass) 
-                actualColor = tintColor;
-            else if (tex == TextureId.GrassSideOverlay) 
-                actualColor = tintColor; // Grass side sẽ được tách thành 2 quad
+            Color actualColor = tintColor;
+            
+            if (tex == TextureId.GrassSide)
+            {
+                // Phần đất nền phải giữ màu texture gốc.
+                actualColor = Color.white * GetFaceShade(direction);
+            }
 
             for (int i = 0; i < 4; i++) colors.Add(actualColor);
 
-            // Nếu đây là GrassSide, vẽ thêm 1 quad GrassSideOverlay đè lên với khoảng cách rất nhỏ chống Z-Fighting
             if (tex == TextureId.GrassSide)
             {
                 int overlayStartIndex = vertices.Count;
@@ -602,13 +712,15 @@ namespace MineDemo.World
                 uvs.Add(overlayRect.topRight);
                 uvs.Add(overlayRect.bottomRight);
 
-                for (int i = 0; i < 4; i++) colors.Add(tintColor);
+                Color overlayColor = tintColor; // tintColor đã bao gồm baseColor * GetMaterialFaceShade ở hàm GenerateMesh
+                for (int i = 0; i < 4; i++) colors.Add(overlayColor);
             }
         }
 
         private void AddCrossedQuads(List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, List<Color> colors, int x, int y, int z, TextureId tex)
         {
             UVRect rect = atlasData.GetUVs(tex);
+            Color tint = Color.white * GetMaterialFaceShade(BlockType.Grass, Vector3.up);
 
             // Quad 1 (Diagonal /)
             int startIndex = vertices.Count;
@@ -638,7 +750,7 @@ namespace MineDemo.World
             uvs.Add(rect.topRight);
             uvs.Add(rect.bottomRight);
 
-            for (int i = 0; i < 4; i++) colors.Add(Color.white);
+            for (int i = 0; i < 4; i++) colors.Add(tint);
 
             // Quad 2 (Diagonal \)
             startIndex = vertices.Count;
@@ -667,14 +779,19 @@ namespace MineDemo.World
             uvs.Add(rect.topRight);
             uvs.Add(rect.bottomRight);
 
-            for (int i = 0; i < 4; i++) colors.Add(Color.white);
+            for (int i = 0; i < 4; i++) colors.Add(tint);
         }
 
-        private float GetWaterHeight(byte level)
+        private float GetVisibleSurfaceHeight(byte level)
         {
-            if (level >= 8) return 0.90f;
+            if (level >= 8) return 0.998f;
             if (level <= 0) return 0.0f;
             return Mathf.Clamp01(level / 8.0f) * 0.90f;
+        }
+
+        private float GetCellTopHeight(bool hasWaterAbove, byte level)
+        {
+            return hasWaterAbove ? 1.0f : GetVisibleSurfaceHeight(level);
         }
 
         private bool ShouldRenderWaterFace(
@@ -689,19 +806,10 @@ namespace MineDemo.World
             if (neighborType == BlockType.WaterSource ||
                 neighborType == BlockType.WaterFlow)
             {
-                byte neighborLevel = GetWaterLevelLocal(x, y, z);
-        
-                // Nước cao hơn hoặc bằng che mặt chung.
-                // Nước thấp hơn vẫn cần vẽ mặt để tạo bậc/thác.
+                byte neighborLevel = GetWaterLevelForMesh(x, y, z);
                 return neighborLevel < currentLevel;
             }
         
-            // Mặt bên nước tiếp xúc với block đặc phải được vẽ ở bờ.
-            if (direction != Vector3.down)
-                return true;
-        
-            // Không cần vẽ mặt đáy khi bên dưới là block đặc.
-            // Chỉ vẽ đáy nếu nước đang treo trên Air/Leaves.
             return neighborType == BlockType.Air ||
                    neighborType == BlockType.OakLeaves;
         }
@@ -762,11 +870,49 @@ namespace MineDemo.World
             triangles.Add(startIndex + 2);
             triangles.Add(startIndex + 3);
 
-            // Gắn UV toàn tấm (1 khối nước xài nguyên 1 ảnh từ frame hiện tại)
-            uvs.Add(new Vector2(0, 0));
-            uvs.Add(new Vector2(0, 1));
-            uvs.Add(new Vector2(1, 1));
-            uvs.Add(new Vector2(1, 0));
+            // Gắn UV chuẩn cho từng hướng (không dùng chung 1 mảng để tránh lộn ngược/gương mặt nước)
+            if (direction == Vector3.up)
+            {
+                uvs.Add(new Vector2(0, 0)); // 0,0,0
+                uvs.Add(new Vector2(0, 1)); // 0,0,1
+                uvs.Add(new Vector2(1, 1)); // 1,0,1
+                uvs.Add(new Vector2(1, 0)); // 1,0,0
+            }
+            else if (direction == Vector3.down)
+            {
+                uvs.Add(new Vector2(0, 1));
+                uvs.Add(new Vector2(0, 0));
+                uvs.Add(new Vector2(1, 0));
+                uvs.Add(new Vector2(1, 1));
+            }
+            else if (direction == Vector3.forward) // Z+ (nhìn từ ngoài vào, x từ trái 0->phải 1)
+            {
+                uvs.Add(new Vector2(1, 0)); // (1,0,1) -> dưới phải
+                uvs.Add(new Vector2(1, waterHeight)); // (1,y,1) -> trên phải
+                uvs.Add(new Vector2(0, waterHeight)); // (0,y,1) -> trên trái
+                uvs.Add(new Vector2(0, 0)); // (0,0,1) -> dưới trái
+            }
+            else if (direction == Vector3.back) // Z- (nhìn từ ngoài vào, x từ trái 1->phải 0)
+            {
+                uvs.Add(new Vector2(0, 0)); // (0,0,0) -> dưới trái
+                uvs.Add(new Vector2(0, waterHeight)); // (0,y,0) -> trên trái
+                uvs.Add(new Vector2(1, waterHeight)); // (1,y,0) -> trên phải
+                uvs.Add(new Vector2(1, 0)); // (1,0,0) -> dưới phải
+            }
+            else if (direction == Vector3.right) // X+ (nhìn từ ngoài vào, z từ trái 0->phải 1)
+            {
+                uvs.Add(new Vector2(0, 0)); // (1,0,0) -> dưới trái
+                uvs.Add(new Vector2(0, waterHeight)); // (1,y,0) -> trên trái
+                uvs.Add(new Vector2(1, waterHeight)); // (1,y,1) -> trên phải
+                uvs.Add(new Vector2(1, 0)); // (1,0,1) -> dưới phải
+            }
+            else if (direction == Vector3.left) // X- (nhìn từ ngoài vào, z từ trái 1->phải 0)
+            {
+                uvs.Add(new Vector2(1, 0)); // (0,0,1) -> dưới phải
+                uvs.Add(new Vector2(1, waterHeight)); // (0,y,1) -> trên phải
+                uvs.Add(new Vector2(0, waterHeight)); // (0,y,0) -> trên trái
+                uvs.Add(new Vector2(0, 0)); // (0,0,0) -> dưới trái
+            }
 
             for (int i = 0; i < 4; i++) colors.Add(Color.white);
         }

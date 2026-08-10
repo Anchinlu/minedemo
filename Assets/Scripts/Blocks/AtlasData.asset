@@ -12,49 +12,105 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8b82ec568c35af4478e05b3c3652d3a0, type: 3}
   m_Name: AtlasData
   m_EditorClassIdentifier: Assembly-CSharp::MineDemo.Blocks.AtlasData
-  keys: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a000000
+  keys: 00000000010000000200000003000000040000000500000006000000070000000d0000000e0000000f000000100000001100000012000000130000001400000015000000160000001700000018000000190000001a0000001b0000001c0000001d000000
   values:
   - bottomLeft: {x: 0, y: 0}
-    bottomRight: {x: 0.25, y: 0}
-    topRight: {x: 0.25, y: 0.125}
+    bottomRight: {x: 0.125, y: 0}
+    topRight: {x: 0.125, y: 0.125}
     topLeft: {x: 0, y: 0.125}
+  - bottomLeft: {x: 0.140625, y: 0}
+    bottomRight: {x: 0.265625, y: 0}
+    topRight: {x: 0.265625, y: 0.125}
+    topLeft: {x: 0.140625, y: 0.125}
   - bottomLeft: {x: 0.28125, y: 0}
-    bottomRight: {x: 0.53125, y: 0}
-    topRight: {x: 0.53125, y: 0.125}
+    bottomRight: {x: 0.40625, y: 0}
+    topRight: {x: 0.40625, y: 0.125}
     topLeft: {x: 0.28125, y: 0.125}
+  - bottomLeft: {x: 0.421875, y: 0}
+    bottomRight: {x: 0.546875, y: 0}
+    topRight: {x: 0.546875, y: 0.125}
+    topLeft: {x: 0.421875, y: 0.125}
   - bottomLeft: {x: 0.5625, y: 0}
-    bottomRight: {x: 0.8125, y: 0}
-    topRight: {x: 0.8125, y: 0.125}
+    bottomRight: {x: 0.6875, y: 0}
+    topRight: {x: 0.6875, y: 0.125}
     topLeft: {x: 0.5625, y: 0.125}
+  - bottomLeft: {x: 0.703125, y: 0}
+    bottomRight: {x: 0.828125, y: 0}
+    topRight: {x: 0.828125, y: 0.125}
+    topLeft: {x: 0.703125, y: 0.125}
+  - bottomLeft: {x: 0.84375, y: 0}
+    bottomRight: {x: 0.96875, y: 0}
+    topRight: {x: 0.96875, y: 0.125}
+    topLeft: {x: 0.84375, y: 0.125}
   - bottomLeft: {x: 0, y: 0.140625}
-    bottomRight: {x: 0.25, y: 0.140625}
-    topRight: {x: 0.25, y: 0.265625}
+    bottomRight: {x: 0.125, y: 0.140625}
+    topRight: {x: 0.125, y: 0.265625}
     topLeft: {x: 0, y: 0.265625}
-  - bottomLeft: {x: 0.28125, y: 0.140625}
-    bottomRight: {x: 0.53125, y: 0.140625}
-    topRight: {x: 0.53125, y: 0.265625}
-    topLeft: {x: 0.28125, y: 0.265625}
-  - bottomLeft: {x: 0.5625, y: 0.140625}
-    bottomRight: {x: 0.8125, y: 0.140625}
-    topRight: {x: 0.8125, y: 0.265625}
-    topLeft: {x: 0.5625, y: 0.265625}
   - bottomLeft: {x: 0, y: 0.28125}
-    bottomRight: {x: 0.25, y: 0.28125}
-    topRight: {x: 0.25, y: 0.40625}
+    bottomRight: {x: 0.125, y: 0.28125}
+    topRight: {x: 0.125, y: 0.40625}
     topLeft: {x: 0, y: 0.40625}
-  - bottomLeft: {x: 0.28125, y: 0.28125}
-    bottomRight: {x: 0.53125, y: 0.28125}
-    topRight: {x: 0.53125, y: 0.40625}
-    topLeft: {x: 0.28125, y: 0.40625}
-  - bottomLeft: {x: 0.5625, y: 0.28125}
-    bottomRight: {x: 0.8125, y: 0.28125}
-    topRight: {x: 0.8125, y: 0.40625}
-    topLeft: {x: 0.5625, y: 0.40625}
   - bottomLeft: {x: 0, y: 0.421875}
-    bottomRight: {x: 0.25, y: 0.421875}
-    topRight: {x: 0.25, y: 0.546875}
+    bottomRight: {x: 0.125, y: 0.421875}
+    topRight: {x: 0.125, y: 0.546875}
     topLeft: {x: 0, y: 0.546875}
-  - bottomLeft: {x: 0.28125, y: 0.421875}
-    bottomRight: {x: 0.53125, y: 0.421875}
-    topRight: {x: 0.53125, y: 0.546875}
-    topLeft: {x: 0.28125, y: 0.546875}
+  - bottomLeft: {x: 0, y: 0.5625}
+    bottomRight: {x: 0.125, y: 0.5625}
+    topRight: {x: 0.125, y: 0.6875}
+    topLeft: {x: 0, y: 0.6875}
+  - bottomLeft: {x: 0, y: 0.703125}
+    bottomRight: {x: 0.125, y: 0.703125}
+    topRight: {x: 0.125, y: 0.828125}
+    topLeft: {x: 0, y: 0.828125}
+  - bottomLeft: {x: 0, y: 0.84375}
+    bottomRight: {x: 0.125, y: 0.84375}
+    topRight: {x: 0.125, y: 0.96875}
+    topLeft: {x: 0, y: 0.96875}
+  - bottomLeft: {x: 0.140625, y: 0.140625}
+    bottomRight: {x: 0.265625, y: 0.140625}
+    topRight: {x: 0.265625, y: 0.265625}
+    topLeft: {x: 0.140625, y: 0.265625}
+  - bottomLeft: {x: 0.28125, y: 0.140625}
+    bottomRight: {x: 0.40625, y: 0.140625}
+    topRight: {x: 0.40625, y: 0.265625}
+    topLeft: {x: 0.28125, y: 0.265625}
+  - bottomLeft: {x: 0.421875, y: 0.140625}
+    bottomRight: {x: 0.546875, y: 0.140625}
+    topRight: {x: 0.546875, y: 0.265625}
+    topLeft: {x: 0.421875, y: 0.265625}
+  - bottomLeft: {x: 0.5625, y: 0.140625}
+    bottomRight: {x: 0.6875, y: 0.140625}
+    topRight: {x: 0.6875, y: 0.265625}
+    topLeft: {x: 0.5625, y: 0.265625}
+  - bottomLeft: {x: 0.703125, y: 0.140625}
+    bottomRight: {x: 0.828125, y: 0.140625}
+    topRight: {x: 0.828125, y: 0.265625}
+    topLeft: {x: 0.703125, y: 0.265625}
+  - bottomLeft: {x: 0.84375, y: 0.140625}
+    bottomRight: {x: 0.96875, y: 0.140625}
+    topRight: {x: 0.96875, y: 0.265625}
+    topLeft: {x: 0.84375, y: 0.265625}
+  - bottomLeft: {x: 0.140625, y: 0.28125}
+    bottomRight: {x: 0.265625, y: 0.28125}
+    topRight: {x: 0.265625, y: 0.40625}
+    topLeft: {x: 0.140625, y: 0.40625}
+  - bottomLeft: {x: 0.140625, y: 0.421875}
+    bottomRight: {x: 0.265625, y: 0.421875}
+    topRight: {x: 0.265625, y: 0.546875}
+    topLeft: {x: 0.140625, y: 0.546875}
+  - bottomLeft: {x: 0.140625, y: 0.5625}
+    bottomRight: {x: 0.265625, y: 0.5625}
+    topRight: {x: 0.265625, y: 0.6875}
+    topLeft: {x: 0.140625, y: 0.6875}
+  - bottomLeft: {x: 0.140625, y: 0.703125}
+    bottomRight: {x: 0.265625, y: 0.703125}
+    topRight: {x: 0.265625, y: 0.828125}
+    topLeft: {x: 0.140625, y: 0.828125}
+  - bottomLeft: {x: 0.140625, y: 0.84375}
+    bottomRight: {x: 0.265625, y: 0.84375}
+    topRight: {x: 0.265625, y: 0.96875}
+    topLeft: {x: 0.140625, y: 0.96875}
+  - bottomLeft: {x: 0.28125, y: 0.28125}
+    bottomRight: {x: 0.40625, y: 0.28125}
+    topRight: {x: 0.40625, y: 0.40625}
+    topLeft: {x: 0.28125, y: 0.40625}

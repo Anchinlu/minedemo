@@ -22,6 +22,13 @@ namespace MineDemo.World
         public int maxCellsPerFrame = 500;
         public float updateInterval = 0.15f;
         
+        [Header("Water Material Settings")]
+        [Range(0.45f, 0.75f)]
+        public float waterAlpha = 0.65f;
+        
+        [Range(0.05f, 0.25f)]
+        public float animationInterval = 0.12f;
+        
         private Queue<WaterCell> pendingUpdates = new Queue<WaterCell>();
         private HashSet<Vector3Int> queuedCells = new HashSet<Vector3Int>();
         
@@ -64,9 +71,9 @@ namespace MineDemo.World
             if (animData.stillFrames != null && animData.stillFrames.Length > 0)
             {
                 stillTimer += Time.deltaTime;
-                if (stillTimer >= animData.stillFrameTime)
+                if (stillTimer >= animationInterval)
                 {
-                    stillTimer -= animData.stillFrameTime;
+                    stillTimer -= animationInterval;
                     stillIndex = (stillIndex + 1) % animData.stillFrameSequence.Length;
                     int frameNum = animData.stillFrameSequence[stillIndex];
                     if (frameNum >= 0 && frameNum < animData.stillFrames.Length && stillMaterial != null)
@@ -80,9 +87,9 @@ namespace MineDemo.World
             if (animData.flowFrames != null && animData.flowFrames.Length > 0)
             {
                 flowTimer += Time.deltaTime;
-                if (flowTimer >= animData.flowFrameTime)
+                if (flowTimer >= animationInterval)
                 {
-                    flowTimer -= animData.flowFrameTime;
+                    flowTimer -= animationInterval;
                     flowIndex = (flowIndex + 1) % animData.flowFrameSequence.Length;
                     int frameNum = animData.flowFrameSequence[flowIndex];
                     if (frameNum >= 0 && frameNum < animData.flowFrames.Length && flowMaterial != null)
@@ -122,6 +129,11 @@ namespace MineDemo.World
             if (animData.flowFrames != null && animData.flowFrames.Length > 0)
                 flowMaterial.mainTexture = animData.flowFrames[animData.flowFrameSequence[0]];
             
+            // Set Alpha using _Color to ensure custom shaders receive it properly
+            Color waterColor = new Color(0.20f, 0.50f, 0.90f, waterAlpha);
+            stillMaterial.SetColor("_Color", waterColor);
+            flowMaterial.SetColor("_Color", waterColor);
+
             Debug.Log($"Water Material created successfully! Render Pipeline Shader: {shader.name}");
         }
 

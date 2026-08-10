@@ -28,9 +28,29 @@ public class AtlasGenerator
         Texture2D texSand = LoadAndReadable(path + "sand.png");
         Texture2D texBedrock = LoadAndReadable(path + "bedrock.png");
 
+        // Phase 1 Textures
+        Texture2D texGravel = LoadAndReadable(path + "gravel.png");
+        Texture2D texCobblestone = LoadAndReadable(path + "cobblestone.png");
+        Texture2D texDeepslate = LoadAndReadable(path + "deepslate.png");
+        Texture2D texDeepslateTop = LoadAndReadable(path + "deepslate_top.png");
+        Texture2D texCoarseDirt = LoadAndReadable(path + "coarse_dirt.png");
+        Texture2D texClay = LoadAndReadable(path + "clay.png");
+        // Phase 2 Textures
+        Texture2D texSandstone = LoadAndReadable(path + "sandstone.png");
+        Texture2D texSandstoneTop = LoadAndReadable(path + "sandstone_top.png");
+        Texture2D texSandstoneBottom = LoadAndReadable(path + "sandstone_bottom.png");
+        Texture2D texSnow = LoadAndReadable(path + "snow.png");
+        Texture2D texGrassSnowSide = LoadAndReadable(path + "grass_block_snow.png");
+        Texture2D texIce = LoadAndReadable(path + "ice.png");
+        Texture2D texPackedIce = LoadAndReadable(path + "packed_ice.png");
+        Texture2D texMud = LoadAndReadable(path + "mud.png");
+
         if (texDirt == null || texStone == null || texGrassTopBase == null || texGrassSideBase == null || texGrassSideOverlay == null ||
             texOakLogSide == null || texOakLogTop == null || texOakLeavesBase == null || texShortGrassBase == null ||
-            texSand == null || texBedrock == null)
+            texSand == null || texBedrock == null || texGravel == null || texCobblestone == null ||
+            texDeepslate == null || texDeepslateTop == null || texCoarseDirt == null || texClay == null ||
+            texSandstone == null || texSandstoneTop == null || texSandstoneBottom == null || texSnow == null ||
+            texGrassSnowSide == null || texIce == null || texPackedIce == null || texMud == null)
         {
             Debug.LogError("Thiếu file texture gốc! Vui lòng kiểm tra lại Assets/Textures/TempMinecraft/");
             return;
@@ -39,8 +59,8 @@ public class AtlasGenerator
         // 1. Không tint Grass Top (để C# tự tint bằng Vertex Color)
         Texture2D texGrassTop = texGrassTopBase; 
 
-        // 2. Tách riêng Grass Side Base và Grass Side Overlay (để tint bằng C#)
-        Texture2D texGrassSide = texGrassSideBase;
+        // 2. Tách riêng Grass Side Base và Grass Side Overlay
+        Texture2D texGrassSideBaseFinal = texGrassSideBase;
         Texture2D texGrassSideOverlayFinal = texGrassSideOverlay;
 
         // 2.5 Tint Leaves và Short Grass
@@ -69,9 +89,13 @@ public class AtlasGenerator
         // 3. Pack Atlas (Tạo Atlas với 2px padding để chống bleed màu)
         Texture2D atlas = new Texture2D(8192, 8192);
         Texture2D[] texturesToPack = new Texture2D[] { 
-            texDirt, texStone, texGrassTop, texGrassSide, 
+            texDirt, texStone, texGrassTop, texGrassSideBaseFinal, 
             texOakLogSide, texOakLogTop, texOakLeaves, texShortGrass,
-            texSand, texBedrock, texGrassSideOverlayFinal
+            texSand, texBedrock, texGrassSideOverlayFinal,
+            texGravel, texCobblestone, texDeepslate, texDeepslateTop,
+            texCoarseDirt, texClay,
+            texSandstone, texSandstoneTop, texSandstoneBottom, texSnow,
+            texGrassSnowSide, texIce, texPackedIce, texMud
         };
         Rect[] rects = atlas.PackTextures(texturesToPack, 2, 8192); 
 
@@ -106,25 +130,33 @@ public class AtlasGenerator
         TextureId[] ids = new TextureId[] { 
             TextureId.Dirt, TextureId.Stone, TextureId.GrassTop, TextureId.GrassSide, 
             TextureId.OakLogSide, TextureId.OakLogTop, TextureId.OakLeaves, TextureId.ShortGrass,
-            TextureId.Sand, TextureId.Bedrock, TextureId.GrassSideOverlay
+            TextureId.Sand, TextureId.Bedrock, TextureId.GrassSideOverlay,
+            TextureId.Gravel, TextureId.Cobblestone, TextureId.Deepslate, TextureId.DeepslateTop,
+            TextureId.CoarseDirt, TextureId.Clay,
+            TextureId.Sandstone, TextureId.SandstoneTop, TextureId.SandstoneBottom, TextureId.Snow,
+            TextureId.GrassSnowSide, TextureId.Ice, TextureId.PackedIce, TextureId.Mud
         };
+
+        Debug.Assert(ids.Length == texturesToPack.Length, "Số lượng TextureId không khớp với số lượng Texture2D pack!");
+
         for (int i = 0; i < ids.Length; i++)
         {
-            Rect r = rects[i];
-            UVRect uv = new UVRect();
-            uv.bottomLeft = new Vector2(r.xMin, r.yMin);
-            uv.bottomRight = new Vector2(r.xMax, r.yMin);
-            uv.topRight = new Vector2(r.xMax, r.yMax);
-            uv.topLeft = new Vector2(r.xMin, r.yMax);
+            UVRect rect = new UVRect
+            {
+                bottomLeft = new Vector2(rects[i].xMin, rects[i].yMin),
+                bottomRight = new Vector2(rects[i].xMax, rects[i].yMin),
+                topRight = new Vector2(rects[i].xMax, rects[i].yMax),
+                topLeft = new Vector2(rects[i].xMin, rects[i].yMax)
+            };
             
             atlasData.keys.Add(ids[i]);
-            atlasData.values.Add(uv);
+            atlasData.values.Add(rect);
         }
 
         EditorUtility.SetDirty(atlasData);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("Đã tạo Texture Atlas và cập nhật AtlasData thành công!");
+        Debug.Log($"Atlas generated successfully! Packed {ids.Length} textures.");
     }
 
     private static Texture2D LoadAndReadable(string path)

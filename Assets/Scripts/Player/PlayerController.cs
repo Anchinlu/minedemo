@@ -35,6 +35,15 @@ namespace MineDemo.Player
         void Start()
         {
             controller = GetComponent<CharacterController>();
+            
+            // Tự động gắn hiệu ứng nước nếu chưa có
+            if (GetComponent<UnderwaterEffectController>() == null)
+            {
+                var uw = gameObject.AddComponent<UnderwaterEffectController>();
+                uw.playerCamera = playerCamera;
+                uw.worldManager = worldManager;
+            }
+
             // Ẩn và khóa con trỏ chuột vào giữa màn hình
             Cursor.lockState = CursorLockMode.Locked; 
             

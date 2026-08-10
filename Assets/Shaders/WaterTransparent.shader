@@ -10,6 +10,7 @@ Shader "MineDemo/WaterTransparent"
         Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
         LOD 100
         Blend SrcAlpha OneMinusSrcAlpha
+        ZTest LEqual
         ZWrite Off
         Cull Off
 

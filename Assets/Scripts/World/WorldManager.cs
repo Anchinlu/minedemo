@@ -26,16 +26,42 @@ namespace MineDemo.World
         public Dictionary<Vector3Int, byte> globalWaterLevels = new Dictionary<Vector3Int, byte>();
         
         // Debug flags
-        public static bool EnableTrees = true;
-        public static bool EnableWater = false;
+        public static bool EnableTrees = false;
+        public static bool EnableShortGrass = false;
+        public static bool EnableClouds = false;
         public static bool EnableWaterFlow = false;
+        public static bool EnableWater = false;
+        public static bool EnableWaterTerrainCarving = false;
         public static bool EnableCaves = false;
+        public static bool EnableClimateBiomes = false;
+
+        public int worldSeed = -1; // -1 means random seed
 
         // Quản lý block sinh tự động (chủ yếu là Cây) theo Chunk sở hữu
         public Dictionary<Vector2Int, Dictionary<Vector3Int, BlockType>> chunkProceduralBlocks = new Dictionary<Vector2Int, Dictionary<Vector3Int, BlockType>>();
 
+        void Awake()
+        {
+            if (worldSeed == -1)
+            {
+                TerrainGenerator.Seed = Random.Range(0, 99999999);
+            }
+            else
+            {
+                TerrainGenerator.Seed = worldSeed;
+            }
+            Debug.Log($"[WorldManager] World Seed: {TerrainGenerator.Seed}");
+            Debug.Log($"[WorldManager] Debug Flags: EnableCaves={EnableCaves}, EnableWater={EnableWater}, EnableWaterCarving={EnableWaterTerrainCarving}, EnableWaterFlow={EnableWaterFlow}, EnableTrees={EnableTrees}, EnableClimateBiomes={EnableClimateBiomes}");
+        }
+
         void Start()
         {
+            if (FindFirstObjectByType<MineDemo.UI.WorldDebugOverlay>() == null)
+            {
+                GameObject debugObj = new GameObject("WorldDebugOverlay");
+                debugObj.AddComponent<MineDemo.UI.WorldDebugOverlay>();
+            }
+
             if (MineDemo.Utils.ProfilerLogger.Instance == null)
             {
                 GameObject logger = new GameObject("ProfilerLogger");
@@ -250,7 +276,9 @@ namespace MineDemo.World
                 int localY = WorldToLocalY(worldY);
                 return chunk.GetBlockLocal(localX, localY, localZ);
             }
-            return BlockType.Air;
+            
+            // Fallback đồng nhất tuyệt đối khi chunk chưa load
+            return TerrainGenerator.GetExpectedBlock(worldX, worldY, worldZ);
         }
 
         public BlockType GetBlockForPlayerCheck(int worldX, int worldY, int worldZ)
@@ -329,7 +357,7 @@ namespace MineDemo.World
             if (type == BlockType.WaterSource || type == BlockType.WaterFlow)
             {
                 globalWaterLevels[pos] = waterLevel;
-                if (WaterManager.Instance != null)
+                if (isWaterUpdate && EnableWaterFlow && WaterManager.Instance != null)
                 {
                     WaterManager.Instance.EnqueueWaterUpdate(pos, waterLevel);
                 }
