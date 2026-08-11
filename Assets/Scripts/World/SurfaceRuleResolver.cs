@@ -128,5 +128,83 @@ namespace MineDemo.World
 
             return rockType;
         }
+        public static BlockType ResolveBlock(
+            int worldX,
+            int worldY,
+            int worldZ,
+            in WorldColumn col,
+            bool isSolid,
+            in WorldGenContext context)
+        {
+            if (worldY == WorldBounds.MinBuildY) return BlockType.Bedrock;
+
+            if (!isSolid)
+            {
+                // In Phase A/B, water and caves are disabled, so non-solid is just Air.
+                // Later phases will use AquiferResolver here.
+                return BlockType.Air;
+            }
+
+            // Surface layers
+            if (worldY == col.surfaceY)
+            {
+                if (col.biome == BiomeType.Desert) return BlockType.Sand;
+                if (col.biome == BiomeType.SnowyMountains)
+                {
+                    float snowNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.1f, context.Seed, 21);
+                    if (col.surfaceY > 120 && snowNoise > 0.3f) return BlockType.Snow;
+                    return BlockType.GrassSnow;
+                }
+                if (col.biome == BiomeType.SnowyPlains) return BlockType.GrassSnow;
+                
+                if (col.biome == BiomeType.Mountains)
+                {
+                    if (col.mountainZone == MountainZone.Peak)
+                    {
+                        float cobbleNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.2f, context.Seed, 23);
+                        return cobbleNoise < 0.05f ? BlockType.Cobblestone : BlockType.Stone;
+                    }
+
+                    if (col.mountainZone == MountainZone.Slope && (col.surfaceY >= 145 || col.slope >= 3f))
+                    {
+                        return BlockType.Stone;
+                    }
+
+                    float coarseNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, context.Seed, 22);
+                    if (col.mountainZone == MountainZone.Slope && col.slope >= 2f && coarseNoise < 0.12f)
+                    {
+                        return BlockType.CoarseDirt;
+                    }
+                    
+                    return BlockType.Grass;
+                }
+
+                float forestCoarseNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.3f, context.Seed, 22);
+                if (col.biome == BiomeType.Forest && forestCoarseNoise > 0.7f) return BlockType.CoarseDirt;
+                return BlockType.Grass;
+            }
+
+            // Sub-surface dirt/sand (1-3 blocks deep)
+            if (worldY >= col.surfaceY - 3 && worldY < col.surfaceY)
+            {
+                if (col.biome == BiomeType.Desert) return BlockType.Sandstone;
+                if (col.biome == BiomeType.Mountains && (col.mountainZone == MountainZone.Peak || col.mountainZone == MountainZone.Slope))
+                {
+                    // Subsurface is stone if surface is stone or steep
+                    return BlockType.Stone;
+                }
+                return BlockType.Dirt;
+            }
+
+            // Deep underground
+            if (worldY < 0)
+            {
+                float deepslateNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, context.Seed, 26);
+                float threshold = Mathf.InverseLerp(0, -16, worldY); 
+                return deepslateNoise < threshold ? BlockType.Deepslate : BlockType.Stone;
+            }
+
+            return BlockType.Stone;
+        }
     }
 }

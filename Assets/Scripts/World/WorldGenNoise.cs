@@ -20,5 +20,32 @@ namespace MineDemo.World
 
             return Mathf.PerlinNoise((worldX + offsetX) * scale, (worldZ + offsetZ) * scale);
         }
+
+        public static float RidgedFbm2D(
+            int worldX, int worldZ,
+            float baseFrequency, int seed, int salt,
+            int octaves = 3)
+        {
+            float total = 0f;
+            float amplitude = 1f;
+            float frequency = baseFrequency;
+            float amplitudeSum = 0f;
+
+            for (int octave = 0; octave < octaves; octave++)
+            {
+                float centered = Noise2D(worldX, worldZ, frequency, seed, salt + octave) * 2f - 1f;
+                float ridge = 1f - Mathf.Abs(centered);
+
+                // Pow > 1 narrows high crests and avoids broad rounded tops.
+                ridge = Mathf.Pow(ridge, 2.0f);
+
+                total += ridge * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= 0.5f;
+                frequency *= 2f;
+            }
+
+            return amplitudeSum > 0f ? total / amplitudeSum : 0f;
+        }
     }
 }

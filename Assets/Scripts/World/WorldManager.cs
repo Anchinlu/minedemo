@@ -34,6 +34,7 @@ namespace MineDemo.World
         public static bool EnableWaterTerrainCarving = false;
         public static bool EnableCaves = false;
         public static bool EnableClimateBiomes = false;
+        public static bool EnableWorldGenDiagnostics = false;
 
         public int worldSeed = -1; // -1 means random seed
 
@@ -44,11 +45,11 @@ namespace MineDemo.World
         {
             if (worldSeed == -1)
             {
-                TerrainGenerator.Seed = Random.Range(0, 99999999);
+                TerrainGenerator.SetSeed(Random.Range(0, 99999999));
             }
             else
             {
-                TerrainGenerator.Seed = worldSeed;
+                TerrainGenerator.SetSeed(worldSeed);
             }
             Debug.Log($"[WorldManager] World Seed: {TerrainGenerator.Seed}");
             Debug.Log($"[WorldManager] Debug Flags: EnableCaves={EnableCaves}, EnableWater={EnableWater}, EnableWaterCarving={EnableWaterTerrainCarving}, EnableWaterFlow={EnableWaterFlow}, EnableTrees={EnableTrees}, EnableClimateBiomes={EnableClimateBiomes}");
@@ -61,6 +62,13 @@ namespace MineDemo.World
                 GameObject debugObj = new GameObject("WorldDebugOverlay");
                 debugObj.AddComponent<MineDemo.UI.WorldDebugOverlay>();
             }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (gameObject.GetComponent<WorldGenDebugTools>() == null)
+            {
+                gameObject.AddComponent<WorldGenDebugTools>();
+            }
+#endif
 
             if (MineDemo.Utils.ProfilerLogger.Instance == null)
             {

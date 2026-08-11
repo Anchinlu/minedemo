@@ -208,12 +208,9 @@ namespace MineDemo.World
         private void GenerateTerrain()
         {
             TerrainGenerator.GenerateChunkData(chunkX, chunkZ, Width, Height, Depth, out blocks, out waterLevels, out int minOccupiedLocalY, out int maxOccupiedLocalY);
-            meshMinLocalY = Mathf.Max(0, minOccupiedLocalY - MeshSafetyMargin);
-            meshMaxLocalY = Mathf.Min(Height - 1, maxOccupiedLocalY + MeshSafetyMargin);
-
+            
             int minSurfaceY = 999;
             int maxSurfaceY = -999;
-            int grassCount = 0, dirtCount = 0, stoneCount = 0, airCount = 0;
 
             for (int x = 0; x < Width; x++)
             {
@@ -221,22 +218,51 @@ namespace MineDemo.World
                 {
                     int worldX = chunkX * Width + x;
                     int worldZ = chunkZ * Depth + z;
-                    TerrainShapeResult shape = TerrainShapeGenerator.GenerateShape(worldX, worldZ, TerrainGenerator.Seed);
-                    if (shape.surfaceY < minSurfaceY) minSurfaceY = shape.surfaceY;
-                    if (shape.surfaceY > maxSurfaceY) maxSurfaceY = shape.surfaceY;
+                    
+                    int surfaceY;
+                    if (TerrainGenerator.CurrentMode == WorldGenMode.Density)
+                    {
+                        WorldGenContext context = new WorldGenContext(TerrainGenerator.Seed, WorldBounds.MinBuildY, WorldBounds.MaxBuildY, WorldBounds.SeaLevel);
+                        NoiseSample noise = NoiseRouter.Sample2D(worldX, worldZ, context);
+                        surfaceY = DensityRouter.GetBaseSurfaceY(worldX, worldZ, context, noise);
+                    }
+                    else
+                    {
+                        TerrainShapeResult shape = TerrainShapeGenerator.GenerateShape(worldX, worldZ, TerrainGenerator.Seed);
+                        surfaceY = shape.surfaceY;
+                    }
+                    
+                    if (surfaceY < minSurfaceY) minSurfaceY = surfaceY;
+                    if (surfaceY > maxSurfaceY) maxSurfaceY = surfaceY;
                 }
             }
 
-            for (int i = 0; i < blocks.Length; i++)
+            int minSurfaceLocalY = minSurfaceY - WorldBounds.MinBuildY;
+            
+            if (WorldManager.EnableCaves)
             {
-                BlockType b = blocks[i];
-                if (b == BlockType.Grass || b == BlockType.GrassSnow) grassCount++;
-                else if (b == BlockType.Dirt || b == BlockType.CoarseDirt) dirtCount++;
-                else if (b == BlockType.Stone || b == BlockType.Cobblestone || b == BlockType.Deepslate || b == BlockType.Sandstone) stoneCount++;
-                else if (b == BlockType.Air) airCount++;
+                meshMinLocalY = Mathf.Max(0, minOccupiedLocalY - MeshSafetyMargin);
             }
+            else
+            {
+                meshMinLocalY = Mathf.Max(0, minSurfaceLocalY - 2);
+            }
+            
+            meshMaxLocalY = Mathf.Min(Height - 1, maxOccupiedLocalY + MeshSafetyMargin);
 
-            Debug.Log($"[ChunkTerrain] {chunkX},{chunkZ} surfaceMin={minSurfaceY} surfaceMax={maxSurfaceY} grass={grassCount} dirt={dirtCount} stone={stoneCount} air={airCount}");
+            if (WorldManager.EnableWorldGenDiagnostics)
+            {
+                int grassCount = 0, dirtCount = 0, stoneCount = 0, airCount = 0;
+                for (int i = 0; i < blocks.Length; i++)
+                {
+                    BlockType b = blocks[i];
+                    if (b == BlockType.Grass || b == BlockType.GrassSnow) grassCount++;
+                    else if (b == BlockType.Dirt || b == BlockType.CoarseDirt) dirtCount++;
+                    else if (b == BlockType.Stone || b == BlockType.Cobblestone || b == BlockType.Deepslate || b == BlockType.Sandstone) stoneCount++;
+                    else if (b == BlockType.Air) airCount++;
+                }
+                Debug.Log($"[ChunkTerrain] {chunkX},{chunkZ} surfaceMin={minSurfaceY} surfaceMax={maxSurfaceY} grass={grassCount} dirt={dirtCount} stone={stoneCount} air={airCount}");
+            }
         }
 
         private void SetBlock(int x, int y, int z, BlockType type)
@@ -523,12 +549,29 @@ namespace MineDemo.World
             fluidMesh.RecalculateNormals();
             fluidMesh.RecalculateBounds();
 
-            // Lệnh ghi log mới theo yêu cầu kiểm tra
-            Debug.Log($"[WaterMesh] chunk={chunkX},{chunkZ} waterCells={waterCells} topFaces={topFaces} sideFaces={sideFaces} bottomFaces={bottomFaces}");
-            Debug.Log($"[TerrainMesh] chunk={chunkX},{chunkZ} solidFaces={solidFacesCount}");
-
             sw.Stop();
             long memoryDelta = System.GC.GetTotalMemory(false) - startMemory;
+
+            if (WorldManager.EnableWorldGenDiagnostics)
+            {
+                Debug.Log($"[WaterMesh] chunk={chunkX},{chunkZ} waterCells={waterCells} topFaces={topFaces} sideFaces={sideFaces} bottomFaces={bottomFaces}");
+                Debug.Log($"[TerrainMesh] chunk={chunkX},{chunkZ} solidFaces={solidFacesCount}");
+                
+                if (MineDemo.Utils.ProfilerLogger.Instance != null)
+                {
+                    MineDemo.Utils.ProfilerLogger.Instance.LogMeshGeneration(
+                        $"Chunk_{chunkX}_{chunkZ}", 
+                        sw.ElapsedMilliseconds, 
+                        vertices.Count + fluidVertices.Count + decVertices.Count,
+                        (triangles.Count + flowTriangles.Count + stillTriangles.Count + decTriangles.Count) / 3,
+                        memoryDelta,
+                        meshMinLocalY,
+                        meshMaxLocalY,
+                        !hasGeneratedMeshOnce,
+                        rebuildsThisSecond
+                    );
+                }
+            }
 
             if (Time.time - lastRebuildTime > 1.0f)
             {
@@ -538,21 +581,6 @@ namespace MineDemo.World
             else
             {
                 rebuildsThisSecond++;
-            }
-
-            if (MineDemo.Utils.ProfilerLogger.Instance != null)
-            {
-                MineDemo.Utils.ProfilerLogger.Instance.LogMeshGeneration(
-                    $"Chunk_{chunkX}_{chunkZ}", 
-                    sw.ElapsedMilliseconds, 
-                    vertices.Count + fluidVertices.Count + decVertices.Count,
-                    (triangles.Count + flowTriangles.Count + stillTriangles.Count + decTriangles.Count) / 3,
-                    memoryDelta,
-                    meshMinLocalY,
-                    meshMaxLocalY,
-                    !hasGeneratedMeshOnce,
-                    rebuildsThisSecond
-                );
             }
             
             hasGeneratedMeshOnce = true;

@@ -16,15 +16,44 @@ namespace MineDemo.World
         FrozenRiverLake
     }
 
+    public enum WorldGenMode
+    {
+        LegacyHeightmap,
+        Density
+    }
+
     public class TerrainGenerator
     {
-        public static int Seed = 12345;
+        private static int _seed = 12345;
+        public static int Seed 
+        { 
+            get => _seed; 
+        }
+
+        public static void SetSeed(int newSeed)
+        {
+            _seed = newSeed;
+            if (CurrentMode == WorldGenMode.Density)
+            {
+                columnCache.Clear();
+            }
+        }
+
         public const int WaterLevel = WorldBounds.SeaLevel;
         public const int MinBuildY = WorldBounds.MinBuildY;
         public const int MaxBuildY = WorldBounds.MaxBuildY;
+        
+        public static WorldGenMode CurrentMode = WorldGenMode.Density;
 
         public static void GenerateChunkData(int chunkX, int chunkZ, int width, int height, int depth, out BlockType[] blocks, out byte[] waterLevels, out int minOccupiedLocalY, out int maxOccupiedLocalY)
         {
+            if (CurrentMode == WorldGenMode.Density)
+            {
+                WorldGenContext context = new WorldGenContext(Seed, MinBuildY, MaxBuildY, WaterLevel);
+                DensityChunkSampler.GenerateChunkData(chunkX, chunkZ, width, height, depth, context, out blocks, out waterLevels, out minOccupiedLocalY, out maxOccupiedLocalY);
+                return;
+            }
+
             blocks = new BlockType[width * height * depth];
             waterLevels = new byte[width * height * depth];
             minOccupiedLocalY = height - 1;
@@ -82,12 +111,73 @@ namespace MineDemo.World
             }
         }
 
+        // Cache for columns in Density Mode
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<UnityEngine.Vector2Int, WorldColumn> columnCache 
+            = new System.Collections.Concurrent.ConcurrentDictionary<UnityEngine.Vector2Int, WorldColumn>();
+
+        public static WorldColumn GetWorldColumn(int worldX, int worldZ)
+        {
+            UnityEngine.Vector2Int pos = new UnityEngine.Vector2Int(worldX, worldZ);
+            if (columnCache.TryGetValue(pos, out WorldColumn col))
+            {
+                return col;
+            }
+
+            WorldGenContext context = new WorldGenContext(Seed, MinBuildY, MaxBuildY, WaterLevel);
+            NoiseSample noise = NoiseRouter.Sample2D(worldX, worldZ, context);
+            int surfaceY = DensityRouter.GetBaseSurfaceY(worldX, worldZ, context, noise);
+
+            // Compute neighbors to find slope
+            int nY = DensityRouter.GetBaseSurfaceY(worldX, worldZ + 1, context, NoiseRouter.Sample2D(worldX, worldZ + 1, context));
+            int sY = DensityRouter.GetBaseSurfaceY(worldX, worldZ - 1, context, NoiseRouter.Sample2D(worldX, worldZ - 1, context));
+            int eY = DensityRouter.GetBaseSurfaceY(worldX + 1, worldZ, context, NoiseRouter.Sample2D(worldX + 1, worldZ, context));
+            int wY = DensityRouter.GetBaseSurfaceY(worldX - 1, worldZ, context, NoiseRouter.Sample2D(worldX - 1, worldZ, context));
+
+            float slope = UnityEngine.Mathf.Max(
+                UnityEngine.Mathf.Abs(surfaceY - nY),
+                UnityEngine.Mathf.Abs(surfaceY - sY),
+                UnityEngine.Mathf.Abs(surfaceY - eY),
+                UnityEngine.Mathf.Abs(surfaceY - wY));
+
+            col = new WorldColumn
+            {
+                noise = noise,
+                surfaceY = surfaceY,
+                slope = slope
+            };
+
+            col.mountainZone = MountainZoneResolver.ResolveZone(col);
+            col.biome = BiomeResolver.ResolveBiome(col);
+
+            columnCache.TryAdd(pos, col);
+            return col;
+        }
+
         public static BlockType GetExpectedBlock(int worldX, int worldY, int worldZ)
         {
             if (worldY < MinBuildY || worldY >= MaxBuildY) return BlockType.Air;
 
-            GenerateColumn(worldX, worldZ, out int surfaceY, out bool isWater, out bool isLake, out BiomeType biome);
-            return PipelineGetBlock(worldX, worldY, worldZ, surfaceY, isWater, isLake, biome);
+            if (CurrentMode == WorldGenMode.Density)
+            {
+                WorldColumn col = GetWorldColumn(worldX, worldZ);
+                bool isSolid = worldY <= col.surfaceY;
+                WorldGenContext context = new WorldGenContext(Seed, MinBuildY, MaxBuildY, WaterLevel);
+                return SurfaceRuleResolver.ResolveBlock(worldX, worldY, worldZ, col, isSolid, context);
+            }
+
+            GenerateColumn(worldX, worldZ, out int surface, out bool isWater, out bool isLake, out BiomeType biome);
+            return PipelineGetBlock(worldX, worldY, worldZ, surface, isWater, isLake, biome);
+        }
+
+        public static BiomeType GetBiome(int worldX, int worldZ)
+        {
+            if (CurrentMode == WorldGenMode.Density)
+            {
+                return GetWorldColumn(worldX, worldZ).biome;
+            }
+
+            GenerateColumn(worldX, worldZ, out _, out _, out _, out BiomeType biome);
+            return biome;
         }
 
         public static BlockType PipelineGetBlock(int worldX, int worldY, int worldZ, int surfaceY, bool isWater, bool isLake, BiomeType biome)
@@ -116,11 +206,7 @@ namespace MineDemo.World
             return expectedBlock;
         }
 
-        public static BiomeType GetBiome(int worldX, int worldZ)
-        {
-            GenerateColumn(worldX, worldZ, out int surfaceY, out bool isWater, out bool isLake, out BiomeType biome);
-            return biome;
-        }
+
 
         private static void GenerateColumn(int worldX, int worldZ, out int surfaceY, out bool isWater, out bool isLake, out BiomeType biome)
         {
