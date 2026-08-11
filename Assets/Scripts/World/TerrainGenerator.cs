@@ -143,7 +143,8 @@ namespace MineDemo.World
             {
                 noise = noise,
                 surfaceY = surfaceY,
-                slope = slope
+                slope = slope,
+                isOceanOrLake = (surfaceY <= WaterLevel)
             };
 
             col.mountainZone = MountainZoneResolver.ResolveZone(col);

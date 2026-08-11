@@ -58,8 +58,9 @@ namespace MineDemo.World
 
         public static BiomeType ResolveBiome(in WorldColumn col)
         {
-            float mountainWeight = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.60f, 0.80f, col.noise.ridges));
-            float foothillWeight = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.42f, 0.62f, col.noise.ridges));
+            float mountainWeight = MountainZoneResolver.GetMountainCoreWeight(col);
+            float foothillWeight = MountainZoneResolver.GetMountainRegionWeight(col);
+            foothillWeight *= 1f - mountainWeight;
 
             if (!WorldManager.EnableClimateBiomes)
             {

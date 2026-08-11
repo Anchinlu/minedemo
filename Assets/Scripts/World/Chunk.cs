@@ -452,6 +452,11 @@ namespace MineDemo.World
                                 sideFaces++;
                             }
                         }
+                        else if (BlockRegistry.Get(type).isDecoration)
+                        {
+                            // Thực vật (cỏ, hoa) vẽ dạng chữ X và cho vào decMesh
+                            AddCrossedQuads(decVertices, decTriangles, decUvs, decColors, x, y, z, GetTextureId(type, Vector3.up));
+                        }
                         else if (type != BlockType.Air)
                         {
                             Color baseColor = Color.white;
@@ -497,20 +502,6 @@ namespace MineDemo.World
                             {
                                 AddFace(vertices, triangles, uvs, colors, x, y, z, Vector3.left, GetTextureId(type, Vector3.left), baseColor * GetMaterialFaceShade(type, Vector3.left));
                                 solidFacesCount++;
-                            }
-
-                            // Sinh cỏ thấp ngẫu nhiên trên khối Grass
-                            if (type == BlockType.Grass && GetBlock(x, y + 1, z) == BlockType.Air)
-                            {
-                                int worldX = chunkX * Width + x;
-                                int worldZ = chunkZ * Depth + z;
-                                int hash = (worldX * 73856093 ^ worldZ * 19349663) % 100;
-                                if (hash < 0) hash = -hash;
-                                
-                                if (hash < 8) // Tỉ lệ 8%
-                                {
-                                    AddCrossedQuads(decVertices, decTriangles, decUvs, decColors, x, y + 1, z, TextureId.ShortGrass);
-                                }
                             }
                         }
                     }

@@ -4,10 +4,13 @@ namespace MineDemo.World
     {
         public static void PlaceChunkFeatures(Chunk chunk, int seed)
         {
-            // Feature Stage 1: Trees & Vegetation
+            // Feature Stage 1: Trees
             TreeGenerator.GenerateChunkTrees(chunk, seed);
 
-            // Future Feature Stages: (Grass patches, Flowers, Disk Sand/Gravel, Ores)
+            // Feature Stage 2: Flowers & Grass
+            FlowerGrassGenerator.PlaceChunkFlowersAndGrass(chunk, seed);
+
+            // Future Feature Stages: (Disk Sand/Gravel, Ores)
         }
     }
 }

@@ -81,9 +81,9 @@ namespace MineDemo.UI
                 float feetDensity = DensityRouter.GetDensity(x, blockUnderFeetY, z, context, noise);
                 float camDensity = DensityRouter.GetDensity(x, Mathf.FloorToInt(pos.y + 1.6f), z, context, noise);
                 
-                float foothillWeight = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.42f, 0.62f, noise.ridges));
-                float mountainWeight = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.60f, 0.80f, noise.ridges));
-                foothillWeight *= 1f - mountainWeight;
+                float mountainRegionWeight = MountainZoneResolver.GetMountainRegionWeight(col);
+                float mountainCoreWeight = MountainZoneResolver.GetMountainCoreWeight(col);
+                float foothillWeight = mountainRegionWeight * (1f - mountainCoreWeight);
                 float isolatedPeakWeight = MountainZoneResolver.GetIsolatedPeakWeight(col);
 
                 debugText = $"<b>[MINEDEMO DEBUG OVERLAY]</b>\n" +
@@ -95,7 +95,7 @@ namespace MineDemo.UI
                             $"Block Under Feet (Y:{blockUnderFeetY}): <b><color=green>{blockFeet}</color></b>\n" +
                             $"<b>Noise:</b> Cont:{noise.continentalness:F2} | Ero:{noise.erosion:F2} | Ridg:{noise.ridges:F2} | T:{noise.temperature:F2} | H:{noise.humidity:F2}\n" +
                             $"<b>Shaping:</b> PeakPot:{noise.peakPotential:F2} | Jagged:{noise.jaggedness:F2} | Slope:{col.slope:F1}\n" +
-                            $"<b>Weights:</b> Foothill:{foothillWeight:F2} | Mountain Core:{mountainWeight:F2} | Peak Weight:{isolatedPeakWeight:F2}\n" +
+                            $"<b>Weights:</b> Region:{mountainRegionWeight:F2} | Foothill:{foothillWeight:F2} | Mountain Core:{mountainCoreWeight:F2} | Peak Weight:{isolatedPeakWeight:F2}\n" +
                             $"<b>Density:</b> Feet:{feetDensity:F2} | Camera:{camDensity:F2}\n" +
                             $"<b>Water Table:</b> Not Implemented (Phase C)\n";
             }

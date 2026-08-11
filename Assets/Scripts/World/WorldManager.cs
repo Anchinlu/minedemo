@@ -26,7 +26,7 @@ namespace MineDemo.World
         public Dictionary<Vector3Int, byte> globalWaterLevels = new Dictionary<Vector3Int, byte>();
         
         // Debug flags
-        public static bool EnableTrees = false;
+        public static bool EnableTrees = true;
         public static bool EnableShortGrass = false;
         public static bool EnableClouds = false;
         public static bool EnableWaterFlow = false;

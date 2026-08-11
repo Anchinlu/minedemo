@@ -26,6 +26,26 @@ namespace MineDemo.Blocks
         GrassSnow,
         Ice,
         PackedIce,
-        Mud
+        Mud,
+
+        // Phase 3: Decoration & Flora
+        Poppy = 40,
+        Dandelion,
+        BlueOrchid,
+        Allium,
+        AzureBluet,
+        RedTulip,
+        OrangeTulip,
+        WhiteTulip,
+        PinkTulip,
+        OxeyeDaisy,
+        Cornflower,
+        ShortGrassPlant,
+        TallGrassLower,
+        TallGrassUpper,
+        Fern,
+        ShortDryGrass,
+        TallDryGrassLower,
+        TallDryGrassUpper
     }
 }

@@ -148,6 +148,41 @@ namespace MineDemo.World
             // Surface layers
             if (worldY == col.surfaceY)
             {
+                // Bờ biển / Mép đảo: Nếu độ cao nằm trong khoảng Y=63 đến Y=65 (lấp xấp mặt nước)
+                if (col.surfaceY >= 63 && col.surfaceY <= 65 && col.biome != BiomeType.RiverLake && col.biome != BiomeType.Mountains)
+                {
+                    // Phủ cát hầu hết dải bờ biển, xen kẽ tí cỏ cho tự nhiên
+                    float beachNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.1f, context.Seed, 40);
+                    if (beachNoise > 0.15f) return BlockType.Sand; // 85% bãi biển/đảo là Cát
+                }
+
+                if (col.biome == BiomeType.RiverLake || col.biome == BiomeType.FrozenRiverLake)
+                {
+                    int depth = 63 - worldY; // Giả sử WaterLevel = 63
+                    float noise1 = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, context.Seed, 20);
+                    float noise2 = WorldGenNoise.Noise2D(worldX, worldZ, 0.1f, context.Seed, 30);
+
+                    // 1. Hai bên mép sông (độ sâu 0 - 1 khối)
+                    if (depth <= 1)
+                    {
+                        // Chủ yếu là cát (70%), còn lại là cỏ (30%)
+                        if (noise1 > 0.3f) return BlockType.Sand;
+                        return BlockType.Grass;
+                    }
+                    
+                    // 2. Phần đáy sông (độ sâu > 1)
+                    // Khối đá lốm đốm rải rác hoặc xuất hiện nhiều ở cuối đáy sâu (> 10 block)
+                    if (depth > 10 && noise2 > 0.4f) return BlockType.Stone;
+                    if (noise2 > 0.92f) return BlockType.Stone; 
+
+                    // Tỷ lệ phân bổ: Đất cao nhất, Cát vừa, Sét/Sỏi rất ít
+                    if (noise1 < 0.10f) return BlockType.Clay;   // 10% Đất sét
+                    if (noise1 < 0.20f) return BlockType.Gravel; // 10% Sỏi
+                    if (noise1 < 0.50f) return BlockType.Sand;   // 30% Cát
+                    
+                    return BlockType.Dirt;                       // 50% Đất (Chiếm tỷ lệ cao nhất)
+                }
+
                 if (col.biome == BiomeType.Desert) return BlockType.Sand;
                 if (col.biome == BiomeType.SnowyMountains)
                 {
@@ -159,6 +194,23 @@ namespace MineDemo.World
                 
                 if (col.biome == BiomeType.Mountains)
                 {
+                    // 1. Tầng tuyết vĩnh cửu bao phủ đỉnh núi siêu cao (Y > 155)
+                    if (col.surfaceY > 155) 
+                    {
+                        float snowNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, context.Seed, 50);
+                        return snowNoise > 0.1f ? BlockType.Snow : BlockType.Stone; // Chủ yếu là Tuyết
+                    }
+                    
+                    // 2. Tầng chuyển giao: Tuyết lốm đốm xen lẫn Đá (Y: 130 -> 155)
+                    if (col.surfaceY > 130)
+                    {
+                        float snowNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.08f, context.Seed, 51);
+                        float snowChance = Mathf.InverseLerp(130f, 155f, col.surfaceY);
+                        // Càng lên cao tỷ lệ Tuyết càng dày đặc
+                        return snowNoise < snowChance ? BlockType.Snow : BlockType.Stone;
+                    }
+
+                    // 3. Các vùng núi đá thông thường
                     if (col.mountainZone == MountainZone.Peak)
                     {
                         float cobbleNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.2f, context.Seed, 23);
@@ -187,6 +239,14 @@ namespace MineDemo.World
             // Sub-surface dirt/sand (1-3 blocks deep)
             if (worldY >= col.surfaceY - 3 && worldY < col.surfaceY)
             {
+                if (col.biome == BiomeType.RiverLake || col.biome == BiomeType.FrozenRiverLake)
+                {
+                    float bedNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, context.Seed, 24);
+                    if (bedNoise > 0.5f) return BlockType.Gravel;
+                    if (bedNoise > 0.2f) return BlockType.Sand;
+                    return BlockType.Dirt;
+                }
+                
                 if (col.biome == BiomeType.Desert) return BlockType.Sandstone;
                 if (col.biome == BiomeType.Mountains && (col.mountainZone == MountainZone.Peak || col.mountainZone == MountainZone.Slope))
                 {

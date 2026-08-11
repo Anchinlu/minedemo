@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Collections.Generic;
 using MineDemo.Blocks;
 
 public class AtlasGenerator
@@ -14,98 +15,104 @@ public class AtlasGenerator
         
         string path = "Assets/Textures/TempMinecraft/";
         
-        Texture2D texDirt = LoadAndReadable(path + "dirt.png");
-        Texture2D texStone = LoadAndReadable(path + "stone.png");
-        Texture2D texGrassTopBase = LoadAndReadable(path + "grass_block_top.png");
-        Texture2D texGrassSideBase = LoadAndReadable(path + "grass_block_side.png");
-        Texture2D texGrassSideOverlay = LoadAndReadable(path + "grass_block_side_overlay.png");
+        // Define all standard textures and their IDs
+        var textures = new List<Texture2D>();
+        var ids = new List<TextureId>();
 
-        Texture2D texOakLogSide = LoadAndReadable(path + "oak_log.png");
-        Texture2D texOakLogTop = LoadAndReadable(path + "oak_log_top.png");
-        Texture2D texOakLeavesBase = LoadAndReadable(path + "oak_leaves.png");
-        Texture2D texShortGrassBase = LoadAndReadable(path + "short_grass.png");
+        void Add(TextureId id, string file)
+        {
+            Texture2D tex = LoadAndReadable(path + file);
+            if (tex == null)
+            {
+                Debug.LogError($"Thiếu file texture gốc: {file}! Vui lòng kiểm tra lại {path}");
+            }
+            textures.Add(tex);
+            ids.Add(id);
+        }
 
-        Texture2D texSand = LoadAndReadable(path + "sand.png");
-        Texture2D texBedrock = LoadAndReadable(path + "bedrock.png");
+        void AddTinted(TextureId id, string file)
+        {
+            Texture2D tex = LoadAndReadable(path + file);
+            if (tex == null)
+            {
+                Debug.LogError($"Thiếu file texture gốc: {file}! Vui lòng kiểm tra lại {path}");
+                textures.Add(null);
+                ids.Add(id);
+                return;
+            }
+            textures.Add(TintTexture(tex, grassTint));
+            ids.Add(id);
+        }
+
+        // Base Textures
+        Add(TextureId.Dirt, "dirt.png");
+        Add(TextureId.Stone, "stone.png");
+        Add(TextureId.GrassTop, "grass_block_top.png"); // Không tint để C# tự tint
+        Add(TextureId.GrassSide, "grass_block_side.png");
+        Add(TextureId.OakLogSide, "oak_log.png");
+        Add(TextureId.OakLogTop, "oak_log_top.png");
+        AddTinted(TextureId.OakLeaves, "oak_leaves.png");
+        AddTinted(TextureId.ShortGrass, "short_grass.png");
+        Add(TextureId.Sand, "sand.png");
+        Add(TextureId.Bedrock, "bedrock.png");
+        Add(TextureId.GrassSideOverlay, "grass_block_side_overlay.png");
 
         // Phase 1 Textures
-        Texture2D texGravel = LoadAndReadable(path + "gravel.png");
-        Texture2D texCobblestone = LoadAndReadable(path + "cobblestone.png");
-        Texture2D texDeepslate = LoadAndReadable(path + "deepslate.png");
-        Texture2D texDeepslateTop = LoadAndReadable(path + "deepslate_top.png");
-        Texture2D texCoarseDirt = LoadAndReadable(path + "coarse_dirt.png");
-        Texture2D texClay = LoadAndReadable(path + "clay.png");
-        // Phase 2 Textures
-        Texture2D texSandstone = LoadAndReadable(path + "sandstone.png");
-        Texture2D texSandstoneTop = LoadAndReadable(path + "sandstone_top.png");
-        Texture2D texSandstoneBottom = LoadAndReadable(path + "sandstone_bottom.png");
-        Texture2D texSnow = LoadAndReadable(path + "snow.png");
-        Texture2D texGrassSnowSide = LoadAndReadable(path + "grass_block_snow.png");
-        Texture2D texIce = LoadAndReadable(path + "ice.png");
-        Texture2D texPackedIce = LoadAndReadable(path + "packed_ice.png");
-        Texture2D texMud = LoadAndReadable(path + "mud.png");
+        Add(TextureId.Gravel, "gravel.png");
+        Add(TextureId.Cobblestone, "cobblestone.png");
+        Add(TextureId.Deepslate, "deepslate.png");
+        Add(TextureId.DeepslateTop, "deepslate_top.png");
+        Add(TextureId.CoarseDirt, "coarse_dirt.png");
+        Add(TextureId.Clay, "clay.png");
 
-        if (texDirt == null || texStone == null || texGrassTopBase == null || texGrassSideBase == null || texGrassSideOverlay == null ||
-            texOakLogSide == null || texOakLogTop == null || texOakLeavesBase == null || texShortGrassBase == null ||
-            texSand == null || texBedrock == null || texGravel == null || texCobblestone == null ||
-            texDeepslate == null || texDeepslateTop == null || texCoarseDirt == null || texClay == null ||
-            texSandstone == null || texSandstoneTop == null || texSandstoneBottom == null || texSnow == null ||
-            texGrassSnowSide == null || texIce == null || texPackedIce == null || texMud == null)
+        // Phase 2 Textures
+        Add(TextureId.Sandstone, "sandstone.png");
+        Add(TextureId.SandstoneTop, "sandstone_top.png");
+        Add(TextureId.SandstoneBottom, "sandstone_bottom.png");
+        Add(TextureId.Snow, "snow.png");
+        Add(TextureId.GrassSnowSide, "grass_block_snow.png");
+        Add(TextureId.Ice, "ice.png");
+        Add(TextureId.PackedIce, "packed_ice.png");
+        Add(TextureId.Mud, "mud.png");
+
+        // Phase 3 Textures (Flora)
+        Add(TextureId.Poppy, "poppy.png");
+        Add(TextureId.Dandelion, "dandelion.png");
+        Add(TextureId.BlueOrchid, "blue_orchid.png");
+        Add(TextureId.Allium, "allium.png");
+        Add(TextureId.AzureBluet, "azure_bluet.png");
+        Add(TextureId.RedTulip, "red_tulip.png");
+        Add(TextureId.OrangeTulip, "orange_tulip.png");
+        Add(TextureId.WhiteTulip, "white_tulip.png");
+        Add(TextureId.PinkTulip, "pink_tulip.png");
+        Add(TextureId.OxeyeDaisy, "oxeye_daisy.png");
+        Add(TextureId.Cornflower, "cornflower.png");
+        
+        AddTinted(TextureId.TallGrassLower, "tall_grass_bottom.png");
+        AddTinted(TextureId.TallGrassUpper, "tall_grass_top.png");
+        AddTinted(TextureId.Fern, "fern.png");
+        
+        Add(TextureId.ShortDryGrass, "short_dry_grass.png");
+        Add(TextureId.TallDryGrassLower, "tall_dry_grass.png");
+        Add(TextureId.TallDryGrassUpper, "tall_dry_grass.png");
+
+        if (textures.Contains(null))
         {
-            Debug.LogError("Thiếu file texture gốc! Vui lòng kiểm tra lại Assets/Textures/TempMinecraft/");
+            Debug.LogError("Dừng quá trình tạo Atlas vì có file bị thiếu!");
             return;
         }
 
-        // 1. Không tint Grass Top (để C# tự tint bằng Vertex Color)
-        Texture2D texGrassTop = texGrassTopBase; 
-
-        // 2. Tách riêng Grass Side Base và Grass Side Overlay
-        Texture2D texGrassSideBaseFinal = texGrassSideBase;
-        Texture2D texGrassSideOverlayFinal = texGrassSideOverlay;
-
-        // 2.5 Tint Leaves và Short Grass
-        Texture2D texOakLeaves = new Texture2D(texOakLeavesBase.width, texOakLeavesBase.height, TextureFormat.RGBA32, false);
-        for (int y = 0; y < texOakLeaves.height; y++)
-        {
-            for (int x = 0; x < texOakLeaves.width; x++)
-            {
-                Color c = texOakLeavesBase.GetPixel(x, y);
-                texOakLeaves.SetPixel(x, y, c * grassTint);
-            }
-        }
-        texOakLeaves.Apply();
-
-        Texture2D texShortGrass = new Texture2D(texShortGrassBase.width, texShortGrassBase.height, TextureFormat.RGBA32, false);
-        for (int y = 0; y < texShortGrass.height; y++)
-        {
-            for (int x = 0; x < texShortGrass.width; x++)
-            {
-                Color c = texShortGrassBase.GetPixel(x, y);
-                texShortGrass.SetPixel(x, y, c * grassTint);
-            }
-        }
-        texShortGrass.Apply();
-
-        // 3. Pack Atlas (Tạo Atlas với 2px padding để chống bleed màu)
+        // Pack Atlas (Tạo Atlas với 2px padding để chống bleed màu)
         Texture2D atlas = new Texture2D(8192, 8192);
-        Texture2D[] texturesToPack = new Texture2D[] { 
-            texDirt, texStone, texGrassTop, texGrassSideBaseFinal, 
-            texOakLogSide, texOakLogTop, texOakLeaves, texShortGrass,
-            texSand, texBedrock, texGrassSideOverlayFinal,
-            texGravel, texCobblestone, texDeepslate, texDeepslateTop,
-            texCoarseDirt, texClay,
-            texSandstone, texSandstoneTop, texSandstoneBottom, texSnow,
-            texGrassSnowSide, texIce, texPackedIce, texMud
-        };
-        Rect[] rects = atlas.PackTextures(texturesToPack, 2, 8192); 
+        Rect[] rects = atlas.PackTextures(textures.ToArray(), 2, 8192); 
 
-        // 4. Save Atlas
+        // Save Atlas
         byte[] bytes = atlas.EncodeToPNG();
         string atlasPath = "Assets/Textures/TextureAtlas.png";
         File.WriteAllBytes(atlasPath, bytes);
         AssetDatabase.ImportAsset(atlasPath, ImportAssetOptions.ForceUpdate);
 
-        // 5. Cấu hình Atlas Importer
+        // Cấu hình Atlas Importer
         TextureImporter importer = AssetImporter.GetAtPath(atlasPath) as TextureImporter;
         if (importer != null)
         {
@@ -116,7 +123,7 @@ public class AtlasGenerator
             importer.SaveAndReimport();
         }
 
-        // 6. Ghi dữ liệu UV vào ScriptableObject
+        // Ghi dữ liệu UV vào ScriptableObject
         AtlasData atlasData = AssetDatabase.LoadAssetAtPath<AtlasData>("Assets/Scripts/Blocks/AtlasData.asset");
         if (atlasData == null)
         {
@@ -127,19 +134,9 @@ public class AtlasGenerator
         atlasData.keys.Clear();
         atlasData.values.Clear();
 
-        TextureId[] ids = new TextureId[] { 
-            TextureId.Dirt, TextureId.Stone, TextureId.GrassTop, TextureId.GrassSide, 
-            TextureId.OakLogSide, TextureId.OakLogTop, TextureId.OakLeaves, TextureId.ShortGrass,
-            TextureId.Sand, TextureId.Bedrock, TextureId.GrassSideOverlay,
-            TextureId.Gravel, TextureId.Cobblestone, TextureId.Deepslate, TextureId.DeepslateTop,
-            TextureId.CoarseDirt, TextureId.Clay,
-            TextureId.Sandstone, TextureId.SandstoneTop, TextureId.SandstoneBottom, TextureId.Snow,
-            TextureId.GrassSnowSide, TextureId.Ice, TextureId.PackedIce, TextureId.Mud
-        };
+        Debug.Assert(ids.Count == textures.Count, "Số lượng TextureId không khớp với số lượng Texture2D pack!");
 
-        Debug.Assert(ids.Length == texturesToPack.Length, "Số lượng TextureId không khớp với số lượng Texture2D pack!");
-
-        for (int i = 0; i < ids.Length; i++)
+        for (int i = 0; i < ids.Count; i++)
         {
             UVRect rect = new UVRect
             {
@@ -156,7 +153,22 @@ public class AtlasGenerator
         EditorUtility.SetDirty(atlasData);
         AssetDatabase.SaveAssets();
 
-        Debug.Log($"Atlas generated successfully! Packed {ids.Length} textures.");
+        Debug.Log($"Atlas generated successfully! Packed {ids.Count} textures.");
+    }
+
+    private static Texture2D TintTexture(Texture2D baseTex, Color tint)
+    {
+        Texture2D newTex = new Texture2D(baseTex.width, baseTex.height, TextureFormat.RGBA32, false);
+        for (int y = 0; y < newTex.height; y++)
+        {
+            for (int x = 0; x < newTex.width; x++)
+            {
+                Color c = baseTex.GetPixel(x, y);
+                newTex.SetPixel(x, y, c * tint);
+            }
+        }
+        newTex.Apply();
+        return newTex;
     }
 
     private static Texture2D LoadAndReadable(string path)

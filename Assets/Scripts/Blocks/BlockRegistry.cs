@@ -44,6 +44,33 @@ namespace MineDemo.Blocks
             registry[BlockType.Ice] = new BlockDefinition(BlockType.Ice, TextureId.Ice, true, true, true);
             registry[BlockType.PackedIce] = new BlockDefinition(BlockType.PackedIce, TextureId.PackedIce);
             registry[BlockType.Mud] = new BlockDefinition(BlockType.Mud, TextureId.Mud);
+
+            // Phase 3: Decoration & Flora
+            RegisterDecoration(BlockType.Poppy, TextureId.Poppy);
+            RegisterDecoration(BlockType.Dandelion, TextureId.Dandelion);
+            RegisterDecoration(BlockType.BlueOrchid, TextureId.BlueOrchid);
+            RegisterDecoration(BlockType.Allium, TextureId.Allium);
+            RegisterDecoration(BlockType.AzureBluet, TextureId.AzureBluet);
+            RegisterDecoration(BlockType.RedTulip, TextureId.RedTulip);
+            RegisterDecoration(BlockType.OrangeTulip, TextureId.OrangeTulip);
+            RegisterDecoration(BlockType.WhiteTulip, TextureId.WhiteTulip);
+            RegisterDecoration(BlockType.PinkTulip, TextureId.PinkTulip);
+            RegisterDecoration(BlockType.OxeyeDaisy, TextureId.OxeyeDaisy);
+            RegisterDecoration(BlockType.Cornflower, TextureId.Cornflower);
+            
+            RegisterDecoration(BlockType.ShortGrassPlant, TextureId.ShortGrass);
+            RegisterDecoration(BlockType.TallGrassLower, TextureId.TallGrassLower);
+            RegisterDecoration(BlockType.TallGrassUpper, TextureId.TallGrassUpper);
+            RegisterDecoration(BlockType.Fern, TextureId.Fern);
+            
+            RegisterDecoration(BlockType.ShortDryGrass, TextureId.ShortDryGrass);
+            RegisterDecoration(BlockType.TallDryGrassLower, TextureId.TallDryGrassLower);
+            RegisterDecoration(BlockType.TallDryGrassUpper, TextureId.TallDryGrassUpper);
+        }
+
+        private static void RegisterDecoration(BlockType type, TextureId texture)
+        {
+            registry[type] = new BlockDefinition(type, texture, isSolid: false, hasCollider: false, isTransparent: true, isDecoration: true);
         }
 
         public static BlockDefinition Get(BlockType type)

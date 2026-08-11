@@ -4,17 +4,28 @@ namespace MineDemo.World
 {
     internal static class MountainZoneResolver
     {
+        public static float GetMountainRegionWeight(in WorldColumn col)
+        {
+            // Vùng núi bắt đầu khi Erosion < 0.32 (giống DensityRouter)
+            return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.38f, 0.28f, col.noise.erosion));
+        }
+
+        public static float GetMountainCoreWeight(in WorldColumn col)
+        {
+            // Lõi núi (đỉnh) khi Erosion < 0.20
+            return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.15f, col.noise.erosion));
+        }
+
         public static float GetIsolatedPeakWeight(in WorldColumn col)
         {
-            float mountainCore = Mathf.SmoothStep(0.64f, 0.94f, col.noise.ridges);
-            float lowErosion = 1f - Mathf.SmoothStep(0.30f, 0.75f, col.noise.erosion);
-            float peakSeed = Mathf.SmoothStep(0.70f, 0.90f, col.noise.peakPotential);
-            return mountainCore * Mathf.Pow(peakSeed, 1.5f) * lowErosion;
+            float mountainCore = GetMountainCoreWeight(col);
+            float weirdness = Mathf.SmoothStep(0.60f, 1.0f, col.noise.peakPotential);
+            return mountainCore * weirdness;
         }
 
         public static MountainZone ResolveZone(in WorldColumn col)
         {
-            float mountainRegionWeight = Mathf.SmoothStep(0.52f, 0.72f, col.noise.ridges);
+            float mountainRegionWeight = GetMountainRegionWeight(col);
             float isolatedPeakWeight = GetIsolatedPeakWeight(col);
 
             if (isolatedPeakWeight >= 0.60f && col.surfaceY >= 155)

@@ -667,7 +667,7 @@ MonoBehaviour:
   atlasData: {fileID: 11400000, guid: b1ec709e002d0794b91548fcb39a3538, type: 2}
   player: {fileID: 1795927352}
   viewDistance: 4
-  worldSeed: 33296073
+  worldSeed: 33296077
 --- !u!4 &1437169754
 Transform:
   m_ObjectHideFlags: 0

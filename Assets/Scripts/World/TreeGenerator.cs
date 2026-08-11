@@ -16,6 +16,9 @@ namespace MineDemo.World
         public static void GenerateChunkTrees(Chunk chunk, int seed)
         {
             if (!WorldManager.EnableTrees) return;
+            
+            // Lưu trữ vị trí cây đã sinh trong chunk để kiểm tra khoảng cách
+            List<Vector2Int> spawnedTrees = new List<Vector2Int>();
 
             for (int x = 0; x < Chunk.Width; x++)
             {
@@ -32,15 +35,50 @@ namespace MineDemo.World
                     int hash = (worldX * 3129871 ^ worldZ * 631453 ^ seed) % 100;
                     if (hash < 0) hash = -hash;
 
-                    // Xác định tỉ lệ mọc cây theo Biome
+                    // Tính khoảng cách đến sông để trồng rừng ven sông
+                    float river1 = WorldGenNoise.Noise2D(worldX, worldZ, 0.002f, seed, 7);
+                    float river2 = WorldGenNoise.Noise2D(worldX, worldZ, 0.0025f, seed, 9);
+                    float distToRiver = Mathf.Min(Mathf.Abs(river1 - 0.5f), Mathf.Abs(river2 - 0.5f));
+                    
+                    // Rừng ven sông: Có khoảng cách an toàn với bờ sông (dist > 0.025) và kéo dài ra xung quanh (dist < 0.07)
+                    bool isRiverside = (distToRiver > 0.025f && distToRiver < 0.07f);
+                    
                     int treeChance = 0;
-                    if (biome == BiomeType.Forest) treeChance = 5; // Dày
-                    else if (biome == BiomeType.Plains) treeChance = 1; // Thưa
-                    else if (biome == BiomeType.Hills) treeChance = 2; // Vừa
-                    else if (biome == BiomeType.Mountains) treeChance = 1; // Rất thưa
+                    if (isRiverside)
+                    {
+                        // Mật độ cao nhưng phân bố tự nhiên theo cụm (dùng noise)
+                        float treeCluster = WorldGenNoise.Noise2D(worldX, worldZ, 0.1f, seed, 100);
+                        if (treeCluster > 0.35f) treeChance = 12; // Mật độ rất dày
+                    }
+                    else
+                    {
+                        // Xác định tỉ lệ mọc cây theo Biome ở các vùng bình thường
+                        if (biome == BiomeType.Forest) treeChance = 5; // Dày
+                        else if (biome == BiomeType.Plains) 
+                        {
+                            // Vài cây xuất hiện riêng biệt, rải rác thành các điểm nhỏ ở vùng đồng bằng
+                            float scattered = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, seed, 101);
+                            if (scattered > 0.85f) treeChance = 2; // Lâu lâu mới có 1 bãi cây thưa
+                            else treeChance = 0;
+                        }
+                        else if (biome == BiomeType.Hills) treeChance = 2; // Vừa
+                        else if (biome == BiomeType.Mountains) treeChance = 1; // Rất thưa
+                    }
 
                     if (hash < treeChance)
                     {
+                        // Khoảng cách tối thiểu 3 block (tức là cách nhau ít nhất 2 block trống)
+                        bool tooClose = false;
+                        foreach (Vector2Int pos in spawnedTrees)
+                        {
+                            if (Vector2Int.Distance(new Vector2Int(x, z), pos) < 3f)
+                            {
+                                tooClose = true;
+                                break;
+                            }
+                        }
+                        if (tooClose) continue;
+
                         // Chọn ngẫu nhiên kích thước dựa vào hash
                         int profileHash = (worldX * 73856093 ^ worldZ * 19349663 ^ seed) % 100;
                         if (profileHash < 0) profileHash = -profileHash;
@@ -59,6 +97,7 @@ namespace MineDemo.World
                                 if (rootWorldY < WorldBounds.MinBuildY || rootWorldY + 10 >= WorldBounds.MaxBuildY) break;
                                 
                                 GenerateOakTree(chunk.worldManager, worldX, rootWorldY, worldZ, seed, profile, chunk.chunkX, chunk.chunkZ);
+                                spawnedTrees.Add(new Vector2Int(x, z)); // Ghi nhận vị trí đã trồng
                                 break;
                             }
                             else if (type != BlockType.Air && type != BlockType.OakLeaves)
@@ -73,104 +112,79 @@ namespace MineDemo.World
 
         private static void GenerateOakTree(WorldManager manager, int rootX, int rootY, int rootZ, int seed, TreeProfile profile, int ownerChunkX, int ownerChunkZ)
         {
-            int trunkHeight = 4;
-            int canopyRadius = 2;
-            int canopyHeight = 3;
-
-            // Tính toán biến thể phụ để cây có độ cao chênh lệch trong cùng một Profile
-            int variationHash = (rootX * 12345 ^ rootZ * 67890 ^ seed) % 10;
+            // Tạo biến thể ngẫu nhiên để cây đa dạng
+            int variationHash = (rootX * 12345 ^ rootZ * 67890 ^ seed) % 100;
             if (variationHash < 0) variationHash = -variationHash;
 
-            if (profile == TreeProfile.Small)
-            {
-                trunkHeight = 4 + (variationHash % 2); // 4-5
-                canopyRadius = 2;
-                canopyHeight = 3;
-            }
-            else if (profile == TreeProfile.Medium)
-            {
-                trunkHeight = 5 + (variationHash % 3); // 5-7
-                canopyRadius = 2 + (variationHash % 2); // 2-3
-                canopyHeight = 4;
-            }
-            else if (profile == TreeProfile.Large)
-            {
-                trunkHeight = 7 + (variationHash % 4); // 7-10
-                canopyRadius = 3 + (variationHash % 2); // 3-4
-                canopyHeight = 5;
-            }
-
-            int canopyCenterY = rootY + trunkHeight - 1;
-
-            int canopyStartY = canopyCenterY - (canopyHeight / 2);
-            int canopyEndY = canopyStartY + canopyHeight - 1;
-
-            // Xác định đỉnh của thân cây, đảm bảo thân luôn thấp hơn đỉnh tán lá ít nhất 1 block
-            int trunkTopY = canopyCenterY + 1;
-            if (trunkTopY >= canopyEndY) 
-            {
-                trunkTopY = canopyEndY - 1;
-            }
-
+            // Thân cây cao từ 6 đến 10 block
+            int trunkHeight = 6 + (variationHash % 5); 
+            
             // 1. Kiểm tra không gian thân cây (Trunk Space check)
-            if (!CheckTrunkSpace(manager, rootX, rootY, rootZ, trunkHeight))
-                return; // Huỷ lệnh sinh nếu thân bị vướng (vào đá, thân cây khác, v.v.)
+            // Ngăn chặn việc mọc đè lên lá của cây khác hoặc mọc lơ lửng
+            if (!CheckTrunkSpace(manager, rootX, rootY, rootZ, trunkHeight)) return;
 
-            // 2. Ghi Thân (Từ mặt đất đâm xuyên lên ngang giữa tán)
-            for (int y = rootY; y <= trunkTopY; y++)
+            // 2. Ghi Thân cây
+            for (int y = rootY; y < rootY + trunkHeight; y++)
             {
                 manager.SetProceduralBlock(rootX, y, rootZ, BlockType.OakLog, ownerChunkX, ownerChunkZ);
             }
 
-            // 3. Ghi Tán lá
-            for (int y = canopyStartY; y <= canopyEndY; y++)
-            {
-                int currentRadius = GetCanopyRadius(y, canopyCenterY, canopyRadius, profile);
+            // 3. Ghi Tán lá (Đa dạng và ngẫu nhiên hơn)
+            int leafHeight = 5 + (variationHash % 3); // Tán lá cao 5-7 block
+            int leafStartY = rootY + trunkHeight - (3 + (variationHash % 2)); // Bắt đầu cách đỉnh thân 3-4 block
 
-                for (int x = -currentRadius; x <= currentRadius; x++)
+            for (int y = leafStartY; y <= leafStartY + leafHeight; y++)
+            {
+                int dy = y - leafStartY; // 0 là lớp dưới cùng của tán lá
+                
+                // Bán kính tán lá phình to ở giữa và hóp lại ở hai đầu một cách ngẫu nhiên
+                int radius = 2;
+                if (dy == 0) radius = 1 + (variationHash % 2); // Lớp đáy
+                else if (dy == leafHeight) radius = 1; // Lớp đỉnh cùng
+                else if (dy == leafHeight - 1) radius = 1 + ((variationHash / 10) % 2); 
+                else radius = 2 + ((variationHash + dy) % 2); // Lớp giữa có thể phình ra tới radius 3
+
+                for (int x = -radius; x <= radius; x++)
                 {
-                    for (int z = -currentRadius; z <= currentRadius; z++)
+                    for (int z = -radius; z <= radius; z++)
                     {
-                        // Xoá các khối góc để tán bo tròn hơn
-                        if (Mathf.Abs(x) == currentRadius && Mathf.Abs(z) == currentRadius)
+                        // Cắt tỉa các góc để tạo hình tán lá ngẫu nhiên, không bị vuông vức
+                        if (Mathf.Abs(x) == radius && Mathf.Abs(z) == radius)
                         {
-                            // Tỉa ngẫu nhiên một số lá ở mép để tán trông tự nhiên, lồi lõm hơn
                             int leafHash = ((rootX + x) * 11 ^ (rootZ + z) * 13 ^ y * 17) % 100;
                             if (leafHash < 0) leafHash = -leafHash;
-                            if (leafHash < 50) continue; 
+                            
+                            // Ngẫu nhiên tỉa lá nhiều hơn ở các mép, lớp càng cao hoặc bán kính lớn càng dễ rụng lá góc
+                            int threshold = 30 + (dy * 5) + (radius * 10);
+                            if (leafHash < threshold) continue; 
                         }
 
-                        // Không ghi đè lá lên thân cây
-                        if (x == 0 && z == 0 && y <= trunkTopY)
+                        // Không ghi đè lá lên phần thân cây
+                        if (x == 0 && z == 0 && y < rootY + trunkHeight)
                             continue;
 
-                        // Tán lá bị vướng núi hoặc block khác -> bỏ qua ô đó, không ghi đè, không huỷ cả cây
                         BlockType currentType = manager.GetExpectedBlock(rootX + x, y, rootZ + z);
                         if (currentType != BlockType.Air && currentType != BlockType.OakLeaves)
                             continue;
 
-                        // Ghi dữ liệu tán lá 
                         manager.SetProceduralBlock(rootX + x, y, rootZ + z, BlockType.OakLeaves, ownerChunkX, ownerChunkZ);
                     }
                 }
             }
         }
 
-        private static int GetCanopyRadius(int y, int centerY, int maxRadius, TreeProfile profile)
-        {
-            if (y == centerY) return maxRadius;
-            if (y < centerY) return Mathf.Max(1, maxRadius - 1); // Lớp đáy
-            if (y > centerY) return Mathf.Max(1, maxRadius - (y - centerY)); // Các lớp chóp hóp lại dần
-            return 1;
-        }
-
         private static bool CheckTrunkSpace(WorldManager manager, int rootX, int rootY, int rootZ, int trunkHeight)
         {
-            for (int y = rootY; y < rootY + trunkHeight; y++)
+            // Kiểm tra xem có đúng là đang mọc trên mặt đất (Grass/Dirt) không
+            BlockType ground = manager.GetExpectedBlock(rootX, rootY - 1, rootZ);
+            if (ground != BlockType.Grass && ground != BlockType.Dirt) return false;
+
+            // Quét khoảng không gian phía trên để đảm bảo không bị vướng
+            for (int y = rootY; y < rootY + trunkHeight + 2; y++)
             {
                 BlockType type = manager.GetExpectedBlock(rootX, y, rootZ);
-                // Thân cây chỉ mọc xuyên qua Không khí hoặc Lá cây (lá sẽ bị đè)
-                if (type != BlockType.Air && type != BlockType.OakLeaves)
+                // Từ chối mọc nếu gặp Lá của cây khác hoặc vật cản (ngăn cây mọc đâm xuyên vào nhau)
+                if (type != BlockType.Air)
                     return false;
             }
             return true;
