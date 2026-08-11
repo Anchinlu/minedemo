@@ -85,12 +85,12 @@ namespace MineDemo.World
             
             UpdateChunks();
 
-            // Đưa người chơi lên độ cao an toàn (150) để chờ Chunk sinh ra
+            // Đưa người chơi lên độ cao an toàn (70) để chờ Chunk sinh ra
             if (player != null)
             {
                 var cc = player.GetComponent<CharacterController>();
                 if (cc != null) cc.enabled = false;
-                player.transform.position = new Vector3(Chunk.Width / 2f, 150f, Chunk.Depth / 2f);
+                player.transform.position = new Vector3(Chunk.Width / 2f, 70f, Chunk.Depth / 2f);
                 if (cc != null) cc.enabled = true;
             }
         }

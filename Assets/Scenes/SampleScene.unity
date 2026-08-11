@@ -666,7 +666,8 @@ MonoBehaviour:
   chunkMaterial: {fileID: 2100000, guid: 2541c51f02501154da754108cf658e60, type: 2}
   atlasData: {fileID: 11400000, guid: b1ec709e002d0794b91548fcb39a3538, type: 2}
   player: {fileID: 1795927352}
-  viewDistance: 3
+  viewDistance: 4
+  worldSeed: 33296073
 --- !u!4 &1437169754
 Transform:
   m_ObjectHideFlags: 0
@@ -835,6 +836,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MineDemo.Player.PlayerController
   walkSpeed: 5
+  flySpeed: 15
   gravity: -15
   jumpHeight: 1.2
   lookSensitivity: 2

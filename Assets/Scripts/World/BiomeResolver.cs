@@ -4,46 +4,42 @@ namespace MineDemo.World
 {
     public static class BiomeResolver
     {
-        public static BiomeType ResolveBiome(
-            int worldX, 
-            int worldZ, 
-            int surfaceY, 
-            bool isWater, 
-            float mountainMask, 
-            float hillsMask, 
-            int seed)
+        private const float MountainThreshold = 0.79f;
+        private const float HillsThreshold = 0.40f;
+
+        public static BiomeType ResolveBiome(TerrainShapeResult shape)
         {
             if (!WorldManager.EnableClimateBiomes)
             {
-                if (isWater)
+                if (shape.isWater)
                 {
                     return BiomeType.RiverLake;
                 }
                 else
                 {
-                    if (mountainMask >= 0.45f) return BiomeType.Mountains;
-                    else if (hillsMask >= 0.40f) return BiomeType.Hills;
+                    if (shape.mountainMask >= MountainThreshold) return BiomeType.Mountains;
+                    else if (shape.hillsMask >= HillsThreshold) return BiomeType.Hills;
                     else return BiomeType.Plains;
                 }
             }
 
-            float t = WorldGenNoise.Noise2D(worldX, worldZ, 0.004f, seed, 10);
-            float h = WorldGenNoise.Noise2D(worldX, worldZ, 0.004f, seed, 11);
+            float t = shape.temperature;
+            float h = shape.humidity;
 
             float hotEdge = Mathf.SmoothStep(0.6f, 0.7f, t);
             float dryEdge = Mathf.SmoothStep(0.3f, 0.4f, h);
 
             bool isDesert = hotEdge > 0.5f && dryEdge < 0.5f;
 
-            if (isWater)
+            if (shape.isWater)
             {
                 return (t < 0.12f) ? BiomeType.FrozenRiverLake : BiomeType.RiverLake;
             }
-            else if (t < 0.12f && surfaceY > 62)
+            else if (t < 0.12f && shape.surfaceY > 62)
             {
                 return BiomeType.SnowyPlains;
             }
-            else if (t < 0.20f && mountainMask >= 0.45f)
+            else if (t < 0.20f && shape.mountainMask >= MountainThreshold)
             {
                 return BiomeType.SnowyMountains;
             }
@@ -53,8 +49,8 @@ namespace MineDemo.World
             }
             else
             {
-                if (mountainMask >= 0.45f) return BiomeType.Mountains;
-                else if (hillsMask >= 0.40f && mountainMask < 0.45f) return BiomeType.Hills;
+                if (shape.mountainMask >= MountainThreshold) return BiomeType.Mountains;
+                else if (shape.hillsMask >= HillsThreshold && shape.mountainMask < MountainThreshold) return BiomeType.Hills;
                 else if (h > 0.55f && t > 0.4f) return BiomeType.Forest;
                 else return BiomeType.Plains;
             }

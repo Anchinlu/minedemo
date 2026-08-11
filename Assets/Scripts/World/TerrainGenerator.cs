@@ -20,8 +20,8 @@ namespace MineDemo.World
     {
         public static int Seed = 12345;
         public const int WaterLevel = WorldBounds.SeaLevel;
-        public const int MinBuildY = -250;
-        public const int MaxBuildY = 300;
+        public const int MinBuildY = WorldBounds.MinBuildY;
+        public const int MaxBuildY = WorldBounds.MaxBuildY;
 
         public static void GenerateChunkData(int chunkX, int chunkZ, int width, int height, int depth, out BlockType[] blocks, out byte[] waterLevels, out int minOccupiedLocalY, out int maxOccupiedLocalY)
         {
@@ -128,7 +128,7 @@ namespace MineDemo.World
             surfaceY = shape.surfaceY;
             isWater = shape.isWater;
             isLake = shape.isLake;
-            biome = BiomeResolver.ResolveBiome(worldX, worldZ, surfaceY, isWater, shape.mountainMask, shape.hillsMask, Seed);
+            biome = BiomeResolver.ResolveBiome(shape);
         }
 
         private static BlockType CalculateBlock(int worldX, int worldY, int worldZ, int surfaceY, bool isWater, bool isLake, BiomeType biome)
@@ -139,10 +139,10 @@ namespace MineDemo.World
         public static void DebugPrintTerrainInfo(int worldX, int worldZ)
         {
             TerrainShapeResult shape = TerrainShapeGenerator.GenerateShape(worldX, worldZ, Seed);
-            BiomeType biome = BiomeResolver.ResolveBiome(worldX, worldZ, shape.surfaceY, shape.isWater, shape.mountainMask, shape.hillsMask, Seed);
+            BiomeType biome = BiomeResolver.ResolveBiome(shape);
             BlockType topBlock = PipelineGetBlock(worldX, shape.surfaceY, worldZ, shape.surfaceY, shape.isWater, shape.isLake, biome);
 
-            float t = WorldGenNoise.Noise2D(worldX, worldZ, 0.004f, Seed, 10);
+            float t = shape.temperature;
             Debug.Log($"[TerrainDebug] POS X:{worldX} Z:{worldZ} Biome:{biome} SurfY:{shape.surfaceY} isWater:{shape.isWater} isRiver:{shape.isRiver} isLake:{shape.isLake} " +
                       $"Temp:{t:F2} HillsM:{shape.hillsMask:F3} MntM:{shape.mountainMask:F3} TopBlock:{topBlock}");
             Debug.Log($"Height={shape.surfaceY} isWater={shape.isWater} HillsMask={shape.hillsMask:F3} " +
