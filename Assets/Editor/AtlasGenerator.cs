@@ -52,6 +52,9 @@ public class AtlasGenerator
         Add(TextureId.OakLogSide, "oak_log.png");
         Add(TextureId.OakLogTop, "oak_log_top.png");
         AddTinted(TextureId.OakLeaves, "oak_leaves.png");
+        Add(TextureId.BirchLogSide, "birch_log.png");
+        Add(TextureId.BirchLogTop, "birch_log_top.png");
+        Add(TextureId.BirchLeaves, "birch_leaves.png");
         AddTinted(TextureId.ShortGrass, "short_grass.png");
         Add(TextureId.Sand, "sand.png");
         Add(TextureId.Bedrock, "bedrock.png");

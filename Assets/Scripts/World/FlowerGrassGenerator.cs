@@ -56,14 +56,15 @@ namespace MineDemo.World
 
             float flowerNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.005f, seed, 555);
             float grassNoise = WorldGenNoise.Noise2D(worldX, worldZ, 0.05f, seed, 666);
-
             bool placed = false;
+            _ = placed; // Loại bỏ cảnh báo unused variable
 
             switch (biome)
             {
                 case BiomeType.Plains:
                 case BiomeType.Hills:
                 case BiomeType.Mountains:
+                    if (groundBlock != BlockType.Grass) break;
                     float densityMul = (biome == BiomeType.Hills) ? 0.5f : ((biome == BiomeType.Mountains) ? 0.15f : 1.0f);
                     
                     // 1. Hoa (Tỉ lệ rải rác)
@@ -112,6 +113,30 @@ namespace MineDemo.World
                     {
                         chunk.SetBlockLocal(localX, localY, localZ, BlockType.Fern);
                         placed = true;
+                    }
+                    break;
+
+                case BiomeType.BirchForest:
+                    if (groundBlock != BlockType.Grass) break;
+                    // Hạn chế hoa (rất hiếm hoa, chủ yếu là Lily of the valley nếu có, nhưng hiện chưa có nên sẽ dùng hoa cúc trắng hoặc trắng/xanh)
+                    if (rollHash < 2) 
+                    {
+                        chunk.SetBlockLocal(localX, localY, localZ, BlockType.AzureBluet); // Hoa màu nhạt hợp với Birch
+                        placed = true;
+                    }
+                    else if (rollHash < 120) // Ít cỏ hơn Plains, tương tự Forest
+                    {
+                        chunk.SetBlockLocal(localX, localY, localZ, BlockType.ShortGrassPlant);
+                        placed = true;
+                    }
+                    else if (rollHash < 125) // Tall grass
+                    {
+                        if (localY + 1 < Chunk.Height && chunk.GetBlockLocal(localX, localY + 1, localZ) == BlockType.Air)
+                        {
+                            chunk.SetBlockLocal(localX, localY, localZ, BlockType.TallGrassLower);
+                            chunk.SetBlockLocal(localX, localY + 1, localZ, BlockType.TallGrassUpper);
+                            placed = true;
+                        }
                     }
                     break;
 

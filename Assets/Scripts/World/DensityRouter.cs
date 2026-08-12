@@ -88,11 +88,14 @@ namespace MineDemo.World
             }
 
             // 2.5. Hồ ngẫu nhiên (Local Lakes) - Khắc phục đáy hồ bị phẳng 1 block
-            // Tạo các hồ nhỏ rải rác trên bản đồ (Lake noise < 0.25)
-            if (n.lake < 0.25f && baseHeight >= 63f)
+            bool isBirchClimate = (n.humidity > 0.45f && n.humidity < 0.65f && n.temperature > 0.5f && n.temperature < 0.7f);
+            float lakeThreshold = isBirchClimate ? 0.45f : 0.25f; // Tăng khả năng xuất hiện hồ ở Birch
+
+            // Tạo các hồ nhỏ rải rác trên bản đồ
+            if (n.lake < lakeThreshold && baseHeight >= 63f)
             {
                 // Tính độ sâu dần từ mép (0) vào tâm hồ (1)
-                float lakeDepthMask = 1f - (n.lake / 0.25f);
+                float lakeDepthMask = 1f - (n.lake / lakeThreshold);
                 // Dùng hàm bậc 2 (Pow 2) để tạo hình cái bát (bờ thoai thoải, tâm lõm sâu)
                 float depthDrop = Mathf.Pow(lakeDepthMask, 2f) * 15f; // Sâu tối đa 15 block
                 baseHeight -= depthDrop;

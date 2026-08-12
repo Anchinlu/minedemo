@@ -54,6 +54,7 @@ namespace MineDemo.World
                     {
                         // Xác định tỉ lệ mọc cây theo Biome ở các vùng bình thường
                         if (biome == BiomeType.Forest) treeChance = 5; // Dày
+                        else if (biome == BiomeType.BirchForest) treeChance = 10; // Rất dày (Nhiều cây)
                         else if (biome == BiomeType.Plains) 
                         {
                             // Vài cây xuất hiện riêng biệt, rải rác thành các điểm nhỏ ở vùng đồng bằng
@@ -67,11 +68,11 @@ namespace MineDemo.World
 
                     if (hash < treeChance)
                     {
-                        // Khoảng cách tối thiểu 3 block (tức là cách nhau ít nhất 2 block trống)
+                        // Khoảng cách tối thiểu 4 block (tức là cách nhau ít nhất 3 block trống)
                         bool tooClose = false;
                         foreach (Vector2Int pos in spawnedTrees)
                         {
-                            if (Vector2Int.Distance(new Vector2Int(x, z), pos) < 3f)
+                            if (Vector2Int.Distance(new Vector2Int(x, z), pos) < 4f)
                             {
                                 tooClose = true;
                                 break;
@@ -96,7 +97,17 @@ namespace MineDemo.World
                                 int rootWorldY = y + WorldBounds.MinBuildY + 1;
                                 if (rootWorldY < WorldBounds.MinBuildY || rootWorldY + 10 >= WorldBounds.MaxBuildY) break;
                                 
-                                GenerateOakTree(chunk.worldManager, worldX, rootWorldY, worldZ, seed, profile, chunk.chunkX, chunk.chunkZ);
+                                if (biome == BiomeType.BirchForest)
+                                {
+                                    if (profileHash < 15) // 15% cây đổ
+                                        GenerateFallenBirch(chunk.worldManager, worldX, rootWorldY, worldZ, seed, chunk.chunkX, chunk.chunkZ);
+                                    else
+                                        GenerateBirchTree(chunk.worldManager, worldX, rootWorldY, worldZ, seed, chunk.chunkX, chunk.chunkZ);
+                                }
+                                else
+                                {
+                                    GenerateOakTree(chunk.worldManager, worldX, rootWorldY, worldZ, seed, profile, chunk.chunkX, chunk.chunkZ);
+                                }
                                 spawnedTrees.Add(new Vector2Int(x, z)); // Ghi nhận vị trí đã trồng
                                 break;
                             }
@@ -188,6 +199,86 @@ namespace MineDemo.World
                     return false;
             }
             return true;
+        }
+
+        private static void GenerateBirchTree(WorldManager manager, int rootX, int rootY, int rootZ, int seed, int ownerChunkX, int ownerChunkZ)
+        {
+            int variationHash = (rootX * 12345 ^ rootZ * 67890 ^ seed) % 100;
+            if (variationHash < 0) variationHash = -variationHash;
+
+            // Thân cây cao từ 8 đến 12 block (theo yêu cầu)
+            int trunkHeight = 8 + (variationHash % 5); 
+            
+            if (!CheckTrunkSpace(manager, rootX, rootY, rootZ, trunkHeight)) return;
+
+            // Ghi Thân cây Bạch dương
+            for (int y = rootY; y < rootY + trunkHeight; y++)
+            {
+                manager.SetProceduralBlock(rootX, y, rootZ, BlockType.BirchLog, ownerChunkX, ownerChunkZ);
+            }
+
+            // Ghi Tán lá (Đặc trưng Birch: Blob foliage, gọn gàng, ít khuyết)
+            int leafHeight = 3 + (variationHash % 2); // Tán lá cao 3-4 block
+            int leafStartY = rootY + trunkHeight - (2 + (variationHash % 2));
+
+            for (int y = leafStartY; y <= leafStartY + leafHeight; y++)
+            {
+                int dy = y - leafStartY;
+                
+                int radius = 2; // Radius tĩnh của Birch Blob Foliage
+                if (dy == leafHeight) radius = 1; // Lớp chóp nhỏ lại
+
+                for (int x = -radius; x <= radius; x++)
+                {
+                    for (int z = -radius; z <= radius; z++)
+                    {
+                        // Cắt nhẹ 4 góc để tạo hình Blob tròn
+                        if (Mathf.Abs(x) == radius && Mathf.Abs(z) == radius && radius > 1)
+                        {
+                            int leafHash = ((rootX + x) * 11 ^ (rootZ + z) * 13 ^ y * 17) % 100;
+                            if (leafHash < 0) leafHash = -leafHash;
+                            if (leafHash < 50) continue; // Tỉa bớt góc 50%
+                        }
+
+                        if (x == 0 && z == 0 && y < rootY + trunkHeight)
+                            continue;
+
+                        BlockType currentType = manager.GetExpectedBlock(rootX + x, y, rootZ + z);
+                        if (currentType != BlockType.Air && currentType != BlockType.BirchLeaves)
+                            continue;
+
+                        manager.SetProceduralBlock(rootX + x, y, rootZ + z, BlockType.BirchLeaves, ownerChunkX, ownerChunkZ);
+                    }
+                }
+            }
+        }
+
+        private static void GenerateFallenBirch(WorldManager manager, int rootX, int rootY, int rootZ, int seed, int ownerChunkX, int ownerChunkZ)
+        {
+            int variationHash = (rootX * 98765 ^ rootZ * 43210 ^ seed) % 100;
+            if (variationHash < 0) variationHash = -variationHash;
+
+            int logLength = 3 + (variationHash % 4); // 3-6 block gỗ đổ
+            int dx = (variationHash % 2 == 0) ? 1 : 0;
+            int dz = (variationHash % 2 == 0) ? 0 : 1;
+            int sign = (variationHash % 4 >= 2) ? 1 : -1;
+            
+            dx *= sign;
+            dz *= sign;
+
+            for (int i = 0; i < logLength; i++)
+            {
+                int px = rootX + dx * i;
+                int pz = rootZ + dz * i;
+
+                BlockType ground = manager.GetExpectedBlock(px, rootY - 1, pz);
+                if (ground != BlockType.Grass && ground != BlockType.Dirt) break; // Nếu khúc cây gác lên chỗ lồi lõm thì dừng
+
+                BlockType current = manager.GetExpectedBlock(px, rootY, pz);
+                if (current != BlockType.Air && current != BlockType.TallGrassLower) break; // Kẹt
+
+                manager.SetProceduralBlock(px, rootY, pz, BlockType.BirchLog, ownerChunkX, ownerChunkZ);
+            }
         }
     }
 }

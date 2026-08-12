@@ -51,6 +51,7 @@ namespace MineDemo.World
             {
                 if (shape.mountainMask >= MountainThreshold) return BiomeType.Mountains;
                 else if (shape.hillsMask >= HillsThreshold && shape.mountainMask < MountainThreshold) return BiomeType.Hills;
+                else if (h > 0.45f && h < 0.65f && t > 0.5f && t < 0.7f) return BiomeType.BirchForest;
                 else if (h > 0.55f && t > 0.4f) return BiomeType.Forest;
                 else return BiomeType.Plains;
             }
@@ -91,6 +92,7 @@ namespace MineDemo.World
             if (mountainWeight >= 0.45f) return BiomeType.Mountains;
             if (foothillWeight >= 0.35f) return BiomeType.Hills;
             
+            if (h > 0.45f && h < 0.65f && t > 0.5f && t < 0.7f) return BiomeType.BirchForest;
             if (h > 0.55f && t > 0.4f) return BiomeType.Forest;
             
             return BiomeType.Plains;

@@ -8,6 +8,8 @@ namespace MineDemo.Blocks
         Grass,
         OakLog,
         OakLeaves,
+        BirchLog,
+        BirchLeaves,
         WaterSource,
         WaterFlow,
         Sand = 13,

@@ -33,6 +33,11 @@ namespace MineDemo.World
         private const int MeshSafetyMargin = 1;
 
         private bool hasGeneratedMeshOnce = false;
+        private bool isGeneratingMesh = false;
+        private bool isMeshGenerationQueued = false;
+
+        // Diagnostic counters
+        private int waterCells = 0, topFaces = 0, sideFaces = 0, bottomFaces = 0, solidFacesCount = 0;
         private float lastRebuildTime = -1f;
         private int rebuildsThisSecond = 0;
 
@@ -89,14 +94,22 @@ namespace MineDemo.World
             fluidRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
-        public void Initialize(int offsetX, int offsetZ, WorldManager manager, AtlasData atlas)
+        public bool IsInitialized { get; private set; } = false;
+
+        public async void Initialize(int offsetX, int offsetZ, WorldManager manager, AtlasData atlas)
         {
             this.chunkX = offsetX;
             this.chunkZ = offsetZ;
             this.worldManager = manager;
             this.atlasData = atlas;
             
-            GenerateTerrain();
+            await System.Threading.Tasks.Task.Run(() => 
+            {
+                GenerateTerrain();
+            });
+            
+            // Nếu Chunk đã bị huỷ trong lúc sinh địa hình
+            if (this == null || gameObject == null) return;
             
             // Cập nhật block từ Player và Nước (Global Modifications)
             foreach (var kvp in worldManager.globalModifications)
@@ -127,26 +140,23 @@ namespace MineDemo.World
             }
 
             // Áp dụng lá cây/block từ chunk lân cận đâm sang (Procedural Blocks)
-            foreach (var chunkBlocks in worldManager.chunkProceduralBlocks.Values)
+            foreach (var kvp in worldManager.globalProceduralBlocks)
             {
-                foreach (var kvp in chunkBlocks)
+                Vector3Int wPos = kvp.Key;
+                int chunkXForBlock = Mathf.FloorToInt((float)wPos.x / Width);
+                int chunkZForBlock = Mathf.FloorToInt((float)wPos.z / Depth);
+                
+                if (chunkXForBlock == chunkX && chunkZForBlock == chunkZ)
                 {
-                    Vector3Int wPos = kvp.Key;
-                    int chunkXForBlock = Mathf.FloorToInt((float)wPos.x / Width);
-                    int chunkZForBlock = Mathf.FloorToInt((float)wPos.z / Depth);
+                    int localX = wPos.x - chunkX * Width;
+                    int localZ = wPos.z - chunkZ * Depth;
+                    int localY = wPos.y - WorldBounds.MinBuildY;
                     
-                    if (chunkXForBlock == chunkX && chunkZForBlock == chunkZ)
+                    if (localY >= 0 && localY < Height)
                     {
-                        int localX = wPos.x - chunkX * Width;
-                        int localZ = wPos.z - chunkZ * Depth;
-                        int localY = wPos.y - WorldBounds.MinBuildY;
-                        
-                        if (localY >= 0 && localY < Height)
-                        {
-                            SetBlockLocal(localX, localY, localZ, kvp.Value);
-                            if (kvp.Value != BlockType.Air)
-                                IncludeLocalYInMeshBounds(localY);
-                        }
+                        SetBlockLocal(localX, localY, localZ, kvp.Value);
+                        if (kvp.Value != BlockType.Air)
+                            IncludeLocalYInMeshBounds(localY);
                     }
                 }
             }
@@ -170,6 +180,7 @@ namespace MineDemo.World
                 };
             }
             
+            IsInitialized = true;
             GenerateMesh();
         }
 
@@ -294,9 +305,12 @@ namespace MineDemo.World
 
         public BlockType GetBlockLocal(int x, int y, int z)
         {
-            if (x < 0 || x >= Width || y < 0 || y >= Height || z < 0 || z >= Depth)
-                return BlockType.Air;
-            return blocks[x + Width * (y + Height * z)];
+            if (blocks == null) return BlockType.Air;
+            if (x >= 0 && x < Width && y >= 0 && y < Height && z >= 0 && z < Depth)
+            {
+                return blocks[x + Width * (y + Height * z)];
+            }
+            return BlockType.Air;
         }
 
         public void SetBlockLocal(int x, int y, int z, BlockType type)
@@ -366,16 +380,57 @@ namespace MineDemo.World
 
         private bool IsTransparent(BlockType type)
         {
-            if (type == BlockType.Air || type == BlockType.WaterSource || type == BlockType.WaterFlow) return true;
-            return BlockRegistry.Get(type).isTransparent || !BlockRegistry.Get(type).isSolid;
+            int idx = (int)type;
+            if (idx >= 0 && idx < BlockRegistry.isTransparentCache.Length)
+            {
+                return BlockRegistry.isTransparentCache[idx];
+            }
+            return true;
         }
 
         public void GenerateMesh()
         {
-            long startMemory = System.GC.GetTotalMemory(false);
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
+            if (isGeneratingMesh)
+            {
+                isMeshGenerationQueued = true;
+                return;
+            }
+            GenerateMeshAsync();
+        }
 
+        private async void GenerateMeshAsync()
+        {
+            isGeneratingMesh = true;
+            isMeshGenerationQueued = false;
+
+            try
+            {
+                long startMemory = System.GC.GetTotalMemory(false);
+                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
+
+                await System.Threading.Tasks.Task.Run(() =>
+                {
+                    GenerateMeshData();
+                });
+
+                if (this == null || gameObject == null) return;
+                ApplyMesh(sw, startMemory);
+            }
+            finally
+            {
+                isGeneratingMesh = false;
+                if (isMeshGenerationQueued && this != null && gameObject != null)
+                {
+                    GenerateMesh();
+                }
+            }
+        }
+
+
+
+        private void GenerateMeshData()
+        {
             vertices.Clear();
             triangles.Clear();
             uvs.Clear();
@@ -392,8 +447,8 @@ namespace MineDemo.World
             fluidUvs.Clear();
             fluidColors.Clear();
 
-            int waterCells = 0, topFaces = 0, sideFaces = 0, bottomFaces = 0;
-            int solidFacesCount = 0;
+            waterCells = 0; topFaces = 0; sideFaces = 0; bottomFaces = 0;
+            solidFacesCount = 0;
 
             for (int x = 0; x < Width; x++)
             {
@@ -507,7 +562,10 @@ namespace MineDemo.World
                     }
                 }
             }
+        }
 
+        private void ApplyMesh(System.Diagnostics.Stopwatch sw, long startMemory)
+        {
             mainMesh.Clear();
             mainMesh.SetVertices(vertices);
             mainMesh.SetTriangles(triangles, 0);

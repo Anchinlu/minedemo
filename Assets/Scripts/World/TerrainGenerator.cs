@@ -7,6 +7,7 @@ namespace MineDemo.World
     {
         Plains,
         Forest,
+        BirchForest,
         Hills,
         Mountains,
         RiverLake,

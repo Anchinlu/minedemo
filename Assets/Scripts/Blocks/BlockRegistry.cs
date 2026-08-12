@@ -6,9 +6,28 @@ namespace MineDemo.Blocks
     {
         private static readonly Dictionary<BlockType, BlockDefinition> registry = new Dictionary<BlockType, BlockDefinition>();
 
+        // Caching for fast transparency lookups in mesh generation
+        public static readonly bool[] isTransparentCache;
+
         static BlockRegistry()
         {
+            // Allocate cache for all possible enum values
+            int maxEnumValue = 0;
+            foreach (BlockType enumValue in System.Enum.GetValues(typeof(BlockType)))
+            {
+                int value = (int)enumValue;
+                if (value > maxEnumValue) maxEnumValue = value;
+            }
+            isTransparentCache = new bool[maxEnumValue + 1];
+
+            // Default to true (Air or unrecognized blocks)
+            for (int i = 0; i < isTransparentCache.Length; i++)
+            {
+                isTransparentCache[i] = true;
+            }
+
             Initialize();
+            BuildCache();
         }
 
         private static void Initialize()
@@ -28,6 +47,9 @@ namespace MineDemo.Blocks
             // Flora
             registry[BlockType.OakLog] = new BlockDefinition(BlockType.OakLog, TextureId.OakLogTop, TextureId.OakLogTop, TextureId.OakLogSide);
             registry[BlockType.OakLeaves] = new BlockDefinition(BlockType.OakLeaves, TextureId.OakLeaves, isSolid: false);
+            
+            registry[BlockType.BirchLog] = new BlockDefinition(BlockType.BirchLog, TextureId.BirchLogTop, TextureId.BirchLogTop, TextureId.BirchLogSide);
+            registry[BlockType.BirchLeaves] = new BlockDefinition(BlockType.BirchLeaves, TextureId.BirchLeaves, isSolid: false);
 
             // Phase 1
             registry[BlockType.Gravel] = new BlockDefinition(BlockType.Gravel, TextureId.Gravel);
@@ -71,6 +93,19 @@ namespace MineDemo.Blocks
         private static void RegisterDecoration(BlockType type, TextureId texture)
         {
             registry[type] = new BlockDefinition(type, texture, isSolid: false, hasCollider: false, isTransparent: true, isDecoration: true);
+        }
+
+        public static void BuildCache()
+        {
+            // Populate the fast cache array
+            foreach (var kvp in registry)
+            {
+                int idx = (int)kvp.Key;
+                if (idx >= 0 && idx < isTransparentCache.Length)
+                {
+                    isTransparentCache[idx] = kvp.Value.isTransparent || !kvp.Value.isSolid;
+                }
+            }
         }
 
         public static BlockDefinition Get(BlockType type)
